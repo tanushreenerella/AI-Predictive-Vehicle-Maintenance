@@ -22,10 +22,10 @@ htmlcov/
 # 🧾 Logs
 *.log
 
-# 📁 Data / outputs
-*.csv
-*.json
-*.txt
+# 📁 Data / outputs (SAFE version)
+data/*.csv
+data/*.json
+analysis_*.txt
 
 # ⚠️ BUT keep important config JSON (optional)
 !package.json

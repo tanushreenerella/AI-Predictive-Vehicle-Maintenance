@@ -1,0 +1,107 @@
+🗓️ 10-DAY EXECUTION PLAN (REAL, DOABLE)
+🟢 Day 1 — Stabilize Backend (CRITICAL)
+
+Goal: no crashes, no mystery errors
+
+✔ MongoDB connection stable
+✔ JWT working
+✔ Socket.IO stable (no reload bugs)
+✔ /api/health always works
+
+⏱️ 5–6 hours
+
+🟢 Day 2 — Real Projects (CORE)
+
+Goal: kill all mock project data
+
+✔ /api/projects CRUD
+✔ Store funding_goal, stage, skills
+✔ Link projects to users
+
+Frontend:
+✔ Fetch projects
+✔ Show in dashboard
+
+⏱️ 6–7 hours
+
+🟢 Day 3 — Funding System
+
+Goal: funding feels real (even if fake money)
+
+✔ Funding logic rules
+✔ Progress bar
+✔ Prevent self-funding
+
+This alone scores high marks.
+
+⏱️ 5 hours
+
+🟢 Day 4 — Networking via Projects (UNIQUE)
+
+Goal: not random chat
+
+✔ Join project requests
+✔ Approve / reject
+✔ Auto-add to team
+
+This is where your project becomes different.
+
+⏱️ 6 hours
+
+🟢 Day 5 — Chat Finalization
+
+Goal: chat feels reliable
+
+✔ Conversation list
+✔ Join room on open
+✔ Load history
+✔ Realtime updates
+
+No fancy features needed.
+
+⏱️ 4–5 hours
+
+🟢 Day 6 — AI That Makes Sense
+
+Goal: AI is not a gimmick
+
+✔ Investor readiness score
+✔ AI suggestions
+✔ Structured output
+
+Judges LOVE this.
+
+⏱️ 4 hours
+
+🟢 Day 7 — Dashboard Intelligence
+
+Goal: dashboard shows insight
+
+✔ Active projects
+✔ Funding progress
+✔ Pending requests
+✔ AI score summary
+
+⏱️ 4 hours
+
+🟢 Day 8 — UI Polish (MINIMAL)
+
+Goal: clean, not flashy
+
+✔ Loading states
+✔ Empty states
+✔ Error messages
+✔ Better cards
+
+⏱️ 3–4 hours
+
+🟢 Day 9 — Testing + Fixes
+
+Goal: no embarrassment in demo
+
+✔ Register / login
+✔ Create project
+✔ Fund project
+✔ Start chat
+
+⏱️ 4 hours

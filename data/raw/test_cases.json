@@ -1,0 +1,50 @@
+{
+  "normal": {
+    "engine_rpm": 2200,
+    "lub_oil_pressure": 2.2,
+    "fuel_pressure": 2.5,
+    "coolant_pressure": 1.6,
+    "lub_oil_temp": 85,
+    "coolant_temp": 78
+  },
+  "warning": {
+    "engine_rpm": 4200,
+    "lub_oil_pressure": 1.5,
+    "fuel_pressure": 2.0,
+    "coolant_pressure": 1.0,
+    "lub_oil_temp": 105,
+    "coolant_temp": 98
+  },
+  "critical": {
+    "engine_rpm": 6200,
+    "lub_oil_pressure": 0.8,
+    "fuel_pressure": 1.5,
+    "coolant_pressure": 0.5,
+    "lub_oil_temp": 125,
+    "coolant_temp": 115
+  },
+  "edge_cases": [
+    {
+      "name": "high_rpm_normal_temp",
+      "data": {
+        "engine_rpm": 6000,
+        "lub_oil_pressure": 2.0,
+        "fuel_pressure": 2.4,
+        "coolant_pressure": 1.4,
+        "lub_oil_temp": 90,
+        "coolant_temp": 85
+      }
+    },
+    {
+      "name": "normal_rpm_high_temp",
+      "data": {
+        "engine_rpm": 2500,
+        "lub_oil_pressure": 1.2,
+        "fuel_pressure": 2.1,
+        "coolant_pressure": 1.1,
+        "lub_oil_temp": 120,
+        "coolant_temp": 110
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "sensor_data": {
+    "engine_rpm": 6200,
+    "lub_oil_pressure": 1.2,
+    "fuel_pressure": 2.1,
+    "coolant_pressure": 0.8,
+    "lub_oil_temp": 135,
+    "coolant_temp": 115
+  },
+  "user_context": "Engine overheating warning"
+}
