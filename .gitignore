@@ -1,0 +1,60 @@
+# 🔐 Environment variables
+.env
+.env.*
+
+# 🐍 Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+
+# 📦 Virtual environments
+venv/
+env/
+ENV/
+
+# 🧪 Testing / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 🧾 Logs
+*.log
+
+# 📁 Data / outputs
+*.csv
+*.json
+*.txt
+
+# ⚠️ BUT keep important config JSON (optional)
+!package.json
+!tsconfig.json
+
+# 🧠 AI / ML artifacts (VERY IMPORTANT for your project)
+*.pt
+*.pth
+*.onnx
+*.pkl
+*.h5
+
+# 📦 Zipped files
+*.zip
+
+# 🖥️ OS files
+.DS_Store
+Thumbs.db
+
+# 💻 IDE files
+.vscode/
+.idea/
+
+# 🚀 Node (if frontend exists)
+node_modules/
+.next/
+dist/
+build/
+
+# 🔥 Misc
+*.bak
+*.swp
