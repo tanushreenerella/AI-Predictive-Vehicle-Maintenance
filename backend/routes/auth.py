@@ -35,7 +35,8 @@ def signup(data: dict, db: Session = Depends(get_db)):
         key="access_token",
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         max_age=60 * 60 * 24 * 7
     )
     return response
@@ -54,7 +55,8 @@ def login(data: dict, db: Session = Depends(get_db)):
         key="access_token",
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="none",
+        secure=True,
         max_age=60*60*24*7
     )
     return response
