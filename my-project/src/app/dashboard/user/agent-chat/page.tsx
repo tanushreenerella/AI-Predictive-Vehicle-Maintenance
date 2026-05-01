@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
@@ -22,13 +23,9 @@ export default function AgentChatPage() {
     setInput('');
     setLoading(true);
 
-    const res = await fetch(`${API_BASE}/agent/chat`, {
+    const res = await fetchWithAuth(`${API_BASE}/agent/chat`, {
       method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: input,
-      }),
+      body: JSON.stringify({ message: input }),
     });
 
     const data = await res.json();

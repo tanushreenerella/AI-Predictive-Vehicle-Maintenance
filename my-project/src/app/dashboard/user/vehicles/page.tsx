@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-
 import { Vehicle } from '@/lib/types';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
@@ -14,9 +14,7 @@ export default function MyVehiclesPage() {
   useEffect(() => {
     async function loadVehicles() {
       try {
-        const res = await fetch(`${API_BASE}/vehicles/me`, {
-          credentials: 'include',
-        });
+        const res = await fetchWithAuth(`${API_BASE}/vehicles/me`);
 
         if (!res.ok) throw new Error('Unauthorized');
 

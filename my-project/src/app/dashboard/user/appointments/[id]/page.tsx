@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
@@ -11,9 +12,7 @@ export default function ReceiptPage() {
   const [receipt, setReceipt] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/schedule/receipt/${id}`, {
-      credentials: 'include',
-    })
+    fetchWithAuth(`${API_BASE}/schedule/receipt/${id}`)
       .then(res => {
         if (!res.ok) throw new Error();
         return res.json();

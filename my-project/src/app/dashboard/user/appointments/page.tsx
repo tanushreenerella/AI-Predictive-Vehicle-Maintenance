@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
@@ -32,7 +33,7 @@ const [newDate, setNewDate] = useState('');
 const [newTime, setNewTime] = useState('');
 
   useEffect(() => {
-    fetch(`${API_BASE}/schedule/me`, { credentials: 'include' })
+    fetchWithAuth(`${API_BASE}/schedule/me`)
       .then(res => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -162,10 +163,8 @@ const [newTime, setNewTime] = useState('');
       <div className="flex justify-end gap-3 cursor-pointer">
         <button
           onClick={async () => {
-            await fetch(`${API_BASE}/schedule/${appt.id}`, {
+            await fetchWithAuth(`${API_BASE}/schedule/${appt.id}`, {
               method: 'PATCH',
-              credentials: 'include',
-              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 appointment_date: newDate,
                 appointment_time: newTime,
@@ -225,10 +224,7 @@ const [newTime, setNewTime] = useState('');
           onClick={async () => {
             if (!confirm('Cancel this appointment?')) return;
 
-            await fetch(`${API_BASE}/schedule/${appt.id}`, {
-              method: 'DELETE',
-              credentials: 'include',
-            });
+            await fetchWithAuth(`${API_BASE}/schedule/${appt.id}`, { method: 'DELETE' });
 
             setAppointments(prev =>
               prev.filter(a => a.id !== appt.id)

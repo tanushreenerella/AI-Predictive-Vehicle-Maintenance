@@ -12,6 +12,7 @@ import RiskChart from '@/components/charts/RiskChart';
 import ComponentChart from '@/components/charts/ComponentChart';
 import { normalizeDashboardVehicle } from "@/lib/normalizers/vehicle";
 import { useRouter } from "next/navigation";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
 const API_BASE = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
 export default function UserDashboard() {
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -23,8 +24,8 @@ const fetchDashboardData = async () => {
     setLoading(true);
 
     const [vehiclesRes, alertsRes] = await Promise.all([
-      fetch(`${API_BASE}/vehicles/health/me`, { credentials: 'include' }),
-      fetch(`${API_BASE}/alerts/me`, { credentials: 'include' }),
+      fetchWithAuth(`${API_BASE}/vehicles/health/me`),
+      fetchWithAuth(`${API_BASE}/alerts/me`),
     ]);
 
     if (!vehiclesRes.ok || !alertsRes.ok) {

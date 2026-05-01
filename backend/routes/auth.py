@@ -27,19 +27,10 @@ def signup(data: dict, db: Session = Depends(get_db)):
     )
     db.add(user)
     db.commit()
+    db.refresh(user)
 
     token = create_access_token({"sub": user.id, "role": user.role})
-
-    response = Response()
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        samesite="none",
-        secure=True,
-        max_age=60 * 60 * 24 * 7
-    )
-    return response
+    return {"access_token": token, "token_type": "bearer"}
 
 @router.post("/login")
 def login(data: dict, db: Session = Depends(get_db)):
@@ -49,17 +40,7 @@ def login(data: dict, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_access_token({"sub": user.id, "role": user.role})
-
-    response = Response()
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        samesite="none",
-        secure=True,
-        max_age=60*60*24*7
-    )
-    return response
+    return {"access_token": token, "token_type": "bearer"}
 @router.post("/logout")
 def logout(response: Response):
     response.delete_cookie("access_token")

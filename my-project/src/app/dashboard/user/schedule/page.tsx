@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { DashboardVehicle } from '@/lib/types';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
 type ScheduleSuggestion = {
@@ -33,7 +34,7 @@ export default function ScheduleAppointmentPage() {
 
   // 🔹 Load vehicles for this user
   useEffect(() => {
-    fetch(`${API_BASE}/vehicles/health/me`, { credentials: 'include' })
+    fetchWithAuth(`${API_BASE}/vehicles/health/me`)
       .then(res => {
         if (!res.ok) throw new Error('Unauthorized');
         return res.json();
@@ -48,10 +49,7 @@ export default function ScheduleAppointmentPage() {
     setSuggestion(null);
 
     try {
-      const res = await fetch(
-        `${API_BASE}/schedule/suggestion/${vehicleId}`,
-        { credentials: 'include' }
-      );
+      const res = await fetchWithAuth(`${API_BASE}/schedule/suggestion/${vehicleId}`);
 
       if (!res.ok) throw new Error('Failed to fetch suggestion');
 
@@ -74,10 +72,8 @@ export default function ScheduleAppointmentPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch(`${API_BASE}/schedule`, {
+      const res = await fetchWithAuth(`${API_BASE}/schedule`, {
         method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           vehicle_id: selectedVehicle,
           service_type: serviceType,

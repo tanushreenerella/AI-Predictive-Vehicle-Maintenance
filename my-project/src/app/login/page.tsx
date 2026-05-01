@@ -33,21 +33,24 @@ export default function LoginPage() {
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo purposes, simulate successful login
-    await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/login", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  credentials: "include", // 🔴 IMPORTANT
-  body: JSON.stringify({
-    email: formData.email,
-    password: formData.password,
-  }),
-});
+      const res = await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
 
-      // Redirect to appropriate dashboard
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setErrors([err.detail || 'Invalid email or password.']);
+        return;
+      }
+
+      const { access_token } = await res.json();
+      localStorage.setItem('access_token', access_token);
+
       if (formData.userType === 'admin') {
         router.push('/dashboard/admin');
       } else {

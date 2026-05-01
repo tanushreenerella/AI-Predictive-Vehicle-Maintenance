@@ -28,10 +28,8 @@ export default function Header({ user, onMenuClick }: HeaderProps) {
 
   const handleLogout = async () => {
   try {
-    await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/logout", {
-      method: "POST",
-      credentials: "include", // 🔴 VERY IMPORTANT
-    });
+    localStorage.removeItem('access_token');
+    await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/logout", { method: "POST" });
   } catch (error) {
     console.error("Logout failed", error);
   } finally {

@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/dashboard/Sidebar';
-import Header from '@/components/dashboard/Header';
-
-const API_BASE = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 export default function UserLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -15,9 +12,7 @@ export default function UserLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/me", {
-          credentials: "include",
-        });
+        const res = await fetchWithAuth("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/me");
 
         if (!res.ok) throw new Error("Unauthorized");
 

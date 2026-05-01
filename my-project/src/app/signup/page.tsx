@@ -42,24 +42,25 @@ export default function SignupPage() {
     }
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // For demo purposes, simulate successful registration
-    await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/signup", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  credentials: "include",
-  body: JSON.stringify({
-    email: formData.email,
-    password: formData.password,
-    role: formData.userType,
-  }),
-});
+      const res = await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          role: formData.userType,
+        }),
+      });
 
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setErrors([err.detail || 'Registration failed. Please try again.']);
+        return;
+      }
 
+      const { access_token } = await res.json();
+      localStorage.setItem('access_token', access_token);
 
-      // Redirect to appropriate dashboard
       if (formData.userType === 'admin') {
         router.push('/dashboard/admin');
       } else {

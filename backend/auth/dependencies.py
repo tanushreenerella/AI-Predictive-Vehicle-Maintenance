@@ -8,7 +8,15 @@ def get_current_user(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    token = request.cookies.get("access_token")
+    token = None
+
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ", 1)[1]
+
+    if not token:
+        token = request.cookies.get("access_token")
+
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 

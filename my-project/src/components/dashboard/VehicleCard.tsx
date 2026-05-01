@@ -3,6 +3,7 @@
 import { Car, AlertTriangle, CheckCircle, Battery, Thermometer, Zap, Settings,Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { fetchWithAuth } from '@/lib/fetchWithAuth';
 interface VehicleCardProps {
   vehicle: {
     id: number;
@@ -25,13 +26,7 @@ const [running, setRunning] = useState(false);
   const runAI = async () => {
     try {
       setRunning(true);
-      await fetch(
-        `${API_BASE}/vehicles/run/${vehicle.id}`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
-      );
+      await fetchWithAuth(`${API_BASE}/vehicles/run/${vehicle.id}`, { method: "POST" });
       // refresh dashboard data
       window.location.reload();
     } catch (err) {

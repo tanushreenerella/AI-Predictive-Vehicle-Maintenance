@@ -54,10 +54,8 @@ export default function Sidebar({ items, user, collapsed, onToggle }: SidebarPro
 
 const handleLogout = async () => {
   try {
-    await fetch('https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/logout', {
-      method: 'POST',
-      credentials: 'include',
-    });
+    localStorage.removeItem('access_token');
+    await fetch('https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/logout', { method: 'POST' });
   } finally {
     window.location.href = '/login';
   }
