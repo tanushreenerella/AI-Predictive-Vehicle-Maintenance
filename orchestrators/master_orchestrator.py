@@ -13,7 +13,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langchain.tools import tool
 import requests
-
+from agents.failure_prediction.predict import predict_failure
 # Add project root to path
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -22,7 +22,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 # --------------------------------------------------
 load_dotenv()
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-FASTAPI_URL = os.getenv("FASTAPI_URL", "http://localhost:8001")
+FASTAPI_URL = os.getenv("FASTAPI_URL", "http://localhost:8000")
 
 # --------------------------------------------------
 # Tool 1: Failure Prediction Tool
@@ -81,19 +81,10 @@ def analyze_vehicle_data(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
         print("🚀 FINAL DATA SENT TO MODEL:", final_data)
 
         # Call your prediction model
-        response = requests.post(
-            "http://localhost:8001/predict_flex",
-            json=final_data,
-            timeout=10
-        )
-        print(f"📥 [DEBUG] API Response: {response.status_code}")
-
-        if response.status_code != 200:
-            return {"error": f"API Error: {response.text}"}
-
-        result = response.json()
+                # Call prediction model directly (no HTTP)
+        
+        result = predict_failure(final_data)
         print("📦 MODEL OUTPUT:", result)
-
         # Return structured JSON
         return {
             "component": result.get("component", "Engine"),

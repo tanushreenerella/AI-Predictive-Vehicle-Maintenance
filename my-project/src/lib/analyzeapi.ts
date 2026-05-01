@@ -1,6 +1,6 @@
 // lib/api.ts
 export async function analyzeapi(sensorData: any) {
-  const res = await fetch("http://localhost:9000/analyze", {
+  const res = await fetch("http://localhost:8000/analyze", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
