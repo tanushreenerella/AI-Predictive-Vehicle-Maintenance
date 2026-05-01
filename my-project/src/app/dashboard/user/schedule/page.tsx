@@ -2,11 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { DashboardVehicle } from '@/lib/types';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
+import { Bot, Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
+
 const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
-type ScheduleSuggestion = {
+const SERVICE_TYPES = [
+  'General Checkup',
+  'Oil Change',
+  'Cooling System',
+  'Brake Inspection',
+  'Tyre Rotation',
+  'Engine Diagnostic',
+  'Battery Check',
+  'AI Recommended',
+];
+
+type Suggestion = {
   urgency: 'LOW' | 'MEDIUM' | 'HIGH';
   recommended_window_days: number[];
   suggested_date: string;
@@ -16,234 +28,260 @@ type ScheduleSuggestion = {
 };
 
 export default function ScheduleAppointmentPage() {
-  // Vehicles come from /vehicles/health/me
-  const [vehicles, setVehicles] = useState<DashboardVehicle[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<string | null>(null);
-
-  // Scheduling agent output
-  const [suggestion, setSuggestion] = useState<ScheduleSuggestion | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  // Manual scheduling (human-in-the-loop)
-  const [serviceType, setServiceType] = useState('General Checkup');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
   const router = useRouter();
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
+  const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [suggestionError, setSuggestionError] = useState(false);
 
-  // 🔹 Load vehicles for this user
+  // Form state (always visible)
+  const [serviceType, setServiceType] = useState('General Checkup');
+  const [apptDate, setApptDate] = useState('');
+  const [apptTime, setApptTime] = useState('10:00');
+  const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
+
   useEffect(() => {
     fetchWithAuth(`${API_BASE}/vehicles/health/me`)
-      .then(res => {
-        if (!res.ok) throw new Error('Unauthorized');
-        return res.json();
-      })
+      .then(r => r.ok ? r.json() : [])
       .then(setVehicles)
       .catch(() => router.replace('/login'));
   }, [router]);
 
-  // 🔹 Ask Scheduling Agent for recommendation
-  const fetchSuggestion = async (vehicleId: string) => {
-    setLoading(true);
+  const selectVehicle = async (vehicle: any) => {
+    setSelectedVehicle(vehicle);
     setSuggestion(null);
+    setSuggestionError(false);
+    setSuggestionLoading(true);
 
     try {
-      const res = await fetchWithAuth(`${API_BASE}/schedule/suggestion/${vehicleId}`);
-
-      if (!res.ok) throw new Error('Failed to fetch suggestion');
-
-      const data: ScheduleSuggestion = await res.json();
+      const res = await fetchWithAuth(`${API_BASE}/schedule/suggestion/${vehicle.id}`);
+      if (!res.ok) throw new Error();
+      const data: Suggestion = await res.json();
       setSuggestion(data);
-
-      // Pre-fill date with AI suggestion
-      setDate(data.suggested_date);
-    } catch (err) {
-      console.error(err);
+      setApptDate(data.suggested_date);
+    } catch {
+      setSuggestionError(true);
     } finally {
-      setLoading(false);
+      setSuggestionLoading(false);
     }
   };
 
-  // 🔹 Confirm appointment (persist to backend)
-  const confirmAppointment = async () => {
-    if (!selectedVehicle || !suggestion || !date || !time) return;
+  const urgencyColor = (u: string) =>
+    u === 'HIGH' ? 'bg-red-600/20 text-red-400 border-red-600/40'
+    : u === 'MEDIUM' ? 'bg-yellow-600/20 text-yellow-400 border-yellow-600/40'
+    : 'bg-green-600/20 text-green-400 border-green-600/40';
 
+  const handleSubmit = async () => {
+    if (!selectedVehicle || !apptDate || !apptTime) {
+      alert('Please select a vehicle, date, and time.');
+      return;
+    }
     setSubmitting(true);
-
     try {
       const res = await fetchWithAuth(`${API_BASE}/schedule`, {
         method: 'POST',
         body: JSON.stringify({
-          vehicle_id: selectedVehicle,
+          vehicle_id: selectedVehicle.id,
           service_type: serviceType,
-          appointment_date: date,
-          appointment_time: time,
-          urgency: suggestion.urgency,
+          appointment_date: apptDate,
+          appointment_time: apptTime,
+          urgency: suggestion?.urgency ?? 'MEDIUM',
         }),
       });
-
-      if (!res.ok) throw new Error('Failed to schedule');
-
-      alert('✅ Appointment scheduled successfully');
-      router.push('/dashboard/user');
+      if (!res.ok) throw new Error();
+      setSuccess(true);
     } catch {
-      alert('❌ Failed to schedule appointment');
+      alert('Failed to schedule appointment. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white">
-          Schedule Appointment
-        </h1>
-        <p className="text-gray-400">
-          AI-guided scheduling with full control.
-        </p>
-      </div>
-
-      {/* Vehicle Selection */}
-      <div className="bg-gray-800/40 p-6 rounded-2xl border border-gray-700">
-        <h2 className="text-xl font-semibold mb-4 text-white">
-          Select Vehicle
-        </h2>
-
-        <div className="grid md:grid-cols-3 gap-4">
-          {vehicles.map(vehicle => (
-            <button
-              key={vehicle.id}
-              onClick={() => {
-                setSelectedVehicle(vehicle.id);
-                fetchSuggestion(vehicle.id);
-              }}
-              className={`p-4 rounded-xl border text-left transition
-                ${
-                  selectedVehicle === vehicle.id
-                    ? 'border-blue-500 bg-blue-500/10'
-                    : 'border-gray-600 hover:border-gray-500'
-                }`}
-            >
-              <p className="font-semibold text-white">{vehicle.name}</p>
-              <p className="text-sm text-gray-400">{vehicle.model}</p>
-              <p className="text-sm mt-1 text-gray-300">
-                Health: {vehicle.health}%
-              </p>
-            </button>
-          ))}
+  if (success) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6 text-center">
+        <CheckCircle className="w-16 h-16 text-green-400" />
+        <div>
+          <h2 className="text-2xl font-bold text-white">Appointment Scheduled!</h2>
+          <p className="text-gray-400 mt-1">
+            {serviceType} for {selectedVehicle?.name} on {apptDate} at {apptTime}
+          </p>
+        </div>
+        <div className="flex gap-4">
+          <button
+            onClick={() => router.push('/dashboard/user/appointments')}
+            className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-500"
+          >
+            View Appointments
+          </button>
+          <button
+            onClick={() => {
+              setSuccess(false);
+              setSelectedVehicle(null);
+              setSuggestion(null);
+              setApptDate('');
+              setApptTime('10:00');
+            }}
+            className="px-6 py-3 bg-gray-700 text-white rounded-xl hover:bg-gray-600"
+          >
+            Book Another
+          </button>
         </div>
       </div>
+    );
+  }
 
-      {/* AI Recommendation */}
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-white">Schedule Appointment</h1>
+        <p className="text-gray-400">AI-guided scheduling with full manual control.</p>
+      </div>
+
+      {/* Step 1: Vehicle Selection */}
       <div className="bg-gray-800/40 p-6 rounded-2xl border border-gray-700">
-        <h2 className="text-xl font-semibold mb-4 text-white">
-          🤖 AI Recommendation
+        <h2 className="text-lg font-semibold text-white mb-4">1. Select Vehicle</h2>
+        {vehicles.length === 0 ? (
+          <p className="text-gray-400">
+            No vehicles found.{' '}
+            <a href="/dashboard/user/vehicles/add" className="text-blue-400 underline">
+              Add one first.
+            </a>
+          </p>
+        ) : (
+          <div className="grid md:grid-cols-3 gap-4">
+            {vehicles.map(v => (
+              <button
+                key={v.id}
+                onClick={() => selectVehicle(v)}
+                className={`p-4 rounded-xl border text-left transition ${
+                  selectedVehicle?.id === v.id
+                    ? 'border-blue-500 bg-blue-500/10'
+                    : 'border-gray-600 hover:border-gray-500 bg-gray-900/30'
+                }`}
+              >
+                <p className="font-semibold text-white">{v.name}</p>
+                <p className="text-sm text-gray-400">{v.model}</p>
+                <p className="text-sm mt-1 text-gray-300">Health: {v.health}%</p>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Step 2: AI Recommendation */}
+      <div className="bg-gray-800/40 p-6 rounded-2xl border border-gray-700">
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Bot className="w-5 h-5 text-blue-400" />
+          2. AI Recommendation
         </h2>
 
         {!selectedVehicle && (
-          <p className="text-gray-400">
-            Select a vehicle to see AI recommendations.
-          </p>
+          <p className="text-gray-500 text-sm">Select a vehicle above to get an AI recommendation.</p>
         )}
 
-        {loading && (
-          <p className="text-gray-400">
-            Analyzing vehicle condition…
-          </p>
+        {suggestionLoading && (
+          <div className="flex items-center gap-3 text-gray-400">
+            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            Analysing vehicle condition…
+          </div>
+        )}
+
+        {suggestionError && (
+          <div className="flex items-center gap-2 text-yellow-400 text-sm">
+            <AlertTriangle className="w-4 h-4" />
+            Could not get AI recommendation. You can still book manually below.
+          </div>
         )}
 
         {suggestion && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-semibold
-                  ${
-                    suggestion.urgency === 'HIGH'
-                      ? 'bg-red-600/20 text-red-400'
-                      : suggestion.urgency === 'MEDIUM'
-                      ? 'bg-yellow-600/20 text-yellow-400'
-                      : 'bg-green-600/20 text-green-400'
-                  }`}
-              >
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold border ${urgencyColor(suggestion.urgency)}`}>
                 {suggestion.urgency} URGENCY
               </span>
-
               <span className="text-sm text-gray-400">
                 Confidence: {Math.round(suggestion.confidence * 100)}%
               </span>
+              <span className="text-xs text-gray-600">via {suggestion.agent}</span>
             </div>
 
-            <p className="text-gray-300">{suggestion.reasoning}</p>
+            <p className="text-gray-300 text-sm">{suggestion.reasoning}</p>
 
-            <div className="bg-gray-900/40 p-4 rounded-xl border border-gray-600">
-              <p className="text-sm text-gray-400">Recommended Window</p>
-              <p className="text-white font-medium">
-                {suggestion.recommended_window_days[0]}–{suggestion.recommended_window_days[1]} days
-              </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-gray-900/50 rounded-xl p-3">
+                <p className="text-xs text-gray-500">Recommended Window</p>
+                <p className="text-white font-medium">
+                  {suggestion.recommended_window_days[0]}–{suggestion.recommended_window_days[1]} days
+                </p>
+              </div>
+              <div className="bg-gray-900/50 rounded-xl p-3">
+                <p className="text-xs text-gray-500">Suggested Date</p>
+                <p className="text-white font-medium">{suggestion.suggested_date}</p>
+              </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Manual Scheduling */}
-      {suggestion && (
+      {/* Step 3: Book Appointment (always visible once vehicle selected) */}
+      {selectedVehicle && (
         <div className="bg-gray-800/40 p-6 rounded-2xl border border-gray-700">
-          <h2 className="text-xl font-semibold mb-4 text-white">
-            Customize Schedule
+          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-400" />
+            3. Book Appointment
           </h2>
 
           <div className="grid md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm text-gray-400">Service Type</label>
+              <label className="block text-sm text-gray-400 mb-1">Service Type</label>
               <select
                 value={serviceType}
                 onChange={e => setServiceType(e.target.value)}
-                className="w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg p-2 text-white"
+                className="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option>General Checkup</option>
-                <option>Cooling System</option>
-                <option>Oil Change</option>
-                <option>AI Recommended</option>
+                {SERVICE_TYPES.map(s => <option key={s}>{s}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="text-sm text-gray-400">Date</label>
+              <label className="block text-sm text-gray-400 mb-1">Date</label>
               <input
                 type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg p-2 text-white"
+                value={apptDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={e => setApptDate(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="text-sm text-gray-400">Time</label>
+              <label className="block text-sm text-gray-400 mb-1">Time</label>
               <input
                 type="time"
-                value={time}
-                onChange={e => setTime(e.target.value)}
-                className="w-full mt-1 bg-gray-800 border border-gray-600 rounded-lg p-2 text-white"
+                value={apptTime}
+                onChange={e => setApptTime(e.target.value)}
+                className="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
           </div>
-<button
-  onClick={confirmAppointment}
-  disabled={submitting}
-  className={`mt-6 px-6 py-3 rounded-xl text-white font-semibold transition
-    ${
-      submitting
-        ? 'bg-gray-600 cursor-not-allowed'
-        : 'bg-blue-600 hover:bg-blue-500'
-    }`}
->
-  {submitting ? 'Scheduling…' : 'Confirm Appointment'}
-</button>
 
+          {/* Summary */}
+          <div className="mt-4 p-4 bg-gray-900/50 rounded-xl border border-gray-700 text-sm text-gray-300 space-y-1">
+            <p><span className="text-gray-500">Vehicle:</span> {selectedVehicle.name} ({selectedVehicle.model})</p>
+            <p><span className="text-gray-500">Service:</span> {serviceType}</p>
+            <p><span className="text-gray-500">Urgency:</span> {suggestion?.urgency ?? 'MEDIUM'}</p>
+          </div>
 
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !apptDate || !apptTime}
+            className="mt-5 px-8 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition"
+          >
+            {submitting ? 'Scheduling…' : 'Confirm Appointment'}
+          </button>
         </div>
       )}
     </div>

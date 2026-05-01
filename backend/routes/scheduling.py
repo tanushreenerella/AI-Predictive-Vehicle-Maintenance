@@ -27,6 +27,8 @@ def get_schedule_suggestion(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    from datetime import timedelta
+
     vehicle = db.query(Vehicle).filter(
         Vehicle.id == vehicle_id,
         Vehicle.user_id == user.id
@@ -42,14 +44,31 @@ def get_schedule_suggestion(
     }
     decision = agentic_scheduling_agent(vehicle_state)
 
+    # Normalise agent output → consistent frontend shape
+    urgency = decision.get("recommended_urgency", "LOW") if isinstance(decision, dict) else "LOW"
+    reasoning = decision.get("reason", "Based on vehicle health analysis") if isinstance(decision, dict) else str(decision)
+    confidence = decision.get("confidence", 0.7) if isinstance(decision, dict) else 0.7
+
+    if urgency == "HIGH":
+        window = [1, 3]
+        days_ahead = 2
+    elif urgency == "MEDIUM":
+        window = [4, 7]
+        days_ahead = 5
+    else:
+        window = [8, 14]
+        days_ahead = 10
+
+    suggested_date = (date.today() + timedelta(days=days_ahead)).isoformat()
+
     return {
-    "ai_decision": decision,
-    "recommended_action": (
-        "SCHEDULE_NOW"
-        if decision["recommended_urgency"] == "HIGH"
-        else "SCHEDULE_SOON"
-    )
-}
+        "urgency": urgency,
+        "recommended_window_days": window,
+        "suggested_date": suggested_date,
+        "reasoning": reasoning,
+        "confidence": confidence,
+        "agent": "agentic_scheduling_agent",
+    }
 
 
 
