@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar, { MenuItem } from '@/components/dashboard/Sidebar';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 const menuItems: MenuItem[] = [
   {
     title: 'Dashboard',

@@ -37,7 +37,7 @@ export default function LoginPage() {
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       // For demo purposes, simulate successful login
-    await fetch("http://localhost:8000/auth/login", {
+    await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/login", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   credentials: "include", // 🔴 IMPORTANT

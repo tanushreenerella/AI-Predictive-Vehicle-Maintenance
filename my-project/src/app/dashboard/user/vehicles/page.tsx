@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 import { Vehicle } from '@/lib/types';
 
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
 export default function MyVehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);

@@ -16,7 +16,7 @@ interface VehicleCardProps {
     fuelLevel: number;
   };
 }
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
 
 export default function VehicleCard({ vehicle }: VehicleCardProps) {
   const router = useRouter();

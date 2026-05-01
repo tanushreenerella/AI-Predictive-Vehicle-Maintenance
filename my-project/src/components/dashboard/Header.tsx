@@ -28,7 +28,7 @@ export default function Header({ user, onMenuClick }: HeaderProps) {
 
   const handleLogout = async () => {
   try {
-    await fetch("http://localhost:8000/auth/logout", {
+    await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/logout", {
       method: "POST",
       credentials: "include", // 🔴 VERY IMPORTANT
     });

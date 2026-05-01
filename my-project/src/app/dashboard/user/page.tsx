@@ -12,7 +12,7 @@ import RiskChart from '@/components/charts/RiskChart';
 import ComponentChart from '@/components/charts/ComponentChart';
 import { normalizeDashboardVehicle } from "@/lib/normalizers/vehicle";
 import { useRouter } from "next/navigation";
-const API_BASE = "http://localhost:8000";
+const API_BASE = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
 export default function UserDashboard() {
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);

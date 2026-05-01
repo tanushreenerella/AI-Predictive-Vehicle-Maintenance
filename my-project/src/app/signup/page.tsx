@@ -46,7 +46,7 @@ export default function SignupPage() {
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       // For demo purposes, simulate successful registration
-    await fetch("http://localhost:8000/auth/signup", {
+    await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/signup", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   credentials: "include",

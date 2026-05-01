@@ -1,6 +1,6 @@
 import { Vehicle } from "./types";
 import { normalizeVehicle } from "@/lib/normalizers/vehicle";
-const BASE_URL = "http://localhost:8000";
+const BASE_URL = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
 
 // Backend request payload (snake_case)
 export interface CreateVehiclePayload {

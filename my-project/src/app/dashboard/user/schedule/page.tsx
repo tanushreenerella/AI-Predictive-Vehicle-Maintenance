@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { DashboardVehicle } from '@/lib/types';
-const API_BASE = 'http://localhost:8000';
+const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
 type ScheduleSuggestion = {
   urgency: 'LOW' | 'MEDIUM' | 'HIGH';
