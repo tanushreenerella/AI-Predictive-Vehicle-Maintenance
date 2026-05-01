@@ -5,9 +5,13 @@ export function middleware(req: NextRequest) {
   const token = req.cookies.get('access_token')?.value;
   const { pathname } = req.nextUrl;
 
-  // Public routes
-  if (pathname.startsWith('/login') || pathname.startsWith('/signup')) {
-    if (token) {
+  // Public routes - allow through without auth
+  if (
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup')
+  ) {
+    if (token && (pathname.startsWith('/login') || pathname.startsWith('/signup'))) {
       return NextResponse.redirect(new URL('/dashboard/user', req.url));
     }
     return NextResponse.next();
@@ -22,5 +26,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|favicon.ico|api).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|api).*)',
+  ],
 };
