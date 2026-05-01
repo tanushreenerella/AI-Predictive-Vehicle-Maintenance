@@ -5,3 +5,15 @@ xgboost
 joblib
 fastapi
 uvicorn
+sqlalchemy
+psycopg2-binary
+passlib[bcrypt]
+python-jose[cryptography]
+reportlab
+python-dotenv
+openai
+langchain
+langchain-groq
+langchain-core
+langchain-community
+langgraph
