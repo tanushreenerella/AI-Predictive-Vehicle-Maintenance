@@ -1,17 +1,19 @@
-// lib/api.ts
-export async function analyzeapi(sensorData: any) {
-  const res = await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/analyze", {
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
+
+const API_BASE = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
+
+export async function analyzeapi(sensorData: any, vehicleId?: string) {
+  const payload = { ...sensorData };
+  if (vehicleId) payload.vehicle_id = vehicleId;
+
+  const res = await fetchWithAuth(`${API_BASE}/predict`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      sensor_data: sensorData,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
-    throw new Error("Vehicle analysis failed");
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Vehicle analysis failed");
   }
 
   return res.json();

@@ -32,6 +32,11 @@ const menuItems: MenuItem[] = [
   href: '/dashboard/user/appointments',
   icon: 'Calendar',
 },{
+    title: 'AI Analysis',
+    href: '/dashboard/user/analysis',
+    icon: 'TrendingUp',
+  },
+  {
     title: 'AI Assistant',
     href: '/dashboard/user/agent-chat',
     icon: 'Bot',

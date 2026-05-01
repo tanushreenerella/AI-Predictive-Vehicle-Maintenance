@@ -1,8 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { 
-  Car, AlertTriangle, CheckCircle, Calendar, 
-  TrendingUp, Activity, Battery, Thermometer,
+  Car, AlertTriangle, CheckCircle, Calendar,
+  Activity, Battery, Thermometer,
   Zap, Settings, Download
 } from 'lucide-react';
 import VehicleCard from '@/components/dashboard/VehicleCard';
@@ -23,28 +23,34 @@ const fetchDashboardData = async () => {
   try {
     setLoading(true);
 
-    const [vehiclesRes, alertsRes] = await Promise.all([
-      fetchWithAuth(`${API_BASE}/vehicles/health/me`),
-      fetchWithAuth(`${API_BASE}/alerts/me`),
-    ]);
-
-    if (!vehiclesRes.ok || !alertsRes.ok) {
-      throw new Error("Unauthorized");
+    const vehiclesRes = await fetchWithAuth(`${API_BASE}/vehicles/health/me`);
+    if (!vehiclesRes.ok) {
+      if (vehiclesRes.status === 401) {
+        router.replace("/login");
+        return;
+      }
+      throw new Error("Failed to load vehicles");
     }
-
     const vehiclesData = await vehiclesRes.json();
-    const alertsData = await alertsRes.json();
-
     setVehicles(vehiclesData.map(normalizeDashboardVehicle));
-    setAlerts(
-      alertsData.map((a: any) => ({
-        ...a,
-        type: a.type === "error" ? "critical" : a.type,
-      }))
-    );
+
+    // Alerts are best-effort — don't crash if they fail
+    try {
+      const alertsRes = await fetchWithAuth(`${API_BASE}/alerts/me`);
+      if (alertsRes.ok) {
+        const alertsData = await alertsRes.json();
+        setAlerts(
+          alertsData.map((a: any) => ({
+            ...a,
+            type: a.type === "error" ? "critical" : a.type,
+          }))
+        );
+      }
+    } catch {
+      // alerts failure is non-fatal
+    }
   } catch (e) {
     console.error("Dashboard load failed", e);
-    router.replace("/login");
   } finally {
     setLoading(false);
   }
