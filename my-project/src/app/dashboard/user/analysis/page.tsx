@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { analyzeapi } from "@/lib/analyzeapi";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { AlertTriangle, CheckCircle, Activity, ChevronRight } from "lucide-react";
@@ -26,6 +27,7 @@ const fields: { key: keyof SensorData; label: string; placeholder: string }[] = 
 ];
 
 export default function PredictiveAnalysisPage() {
+  const searchParams = useSearchParams();
   const [sensorData, setSensorData] = useState<SensorData>({
     engine_rpm: "", lub_oil_pressure: "", fuel_pressure: "",
     coolant_pressure: "", lub_oil_temp: "", coolant_temp: "",
@@ -39,7 +41,16 @@ export default function PredictiveAnalysisPage() {
   useEffect(() => {
     fetchWithAuth(`${API_BASE}/vehicles/health/me`)
       .then(r => r.ok ? r.json() : [])
-      .then(setVehicles)
+      .then((data: any[]) => {
+        setVehicles(data);
+        // Pre-select vehicle from URL param
+        const paramId = searchParams.get("vehicle_id");
+        if (paramId) {
+          setSelectedVehicleId(paramId);
+        } else if (data.length > 0) {
+          setSelectedVehicleId(String(data[0].id));
+        }
+      })
       .catch(() => {});
   }, []);
 

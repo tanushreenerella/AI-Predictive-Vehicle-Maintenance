@@ -15,7 +15,7 @@ export function normalizeDashboardVehicle(v: any) {
     Math.round(100 - (v.ai_failure_probability ?? 0) * 100)
   );
 
-  let status: "healthy" | "warning" | "critical" = "healthy";
+  let status: "optimal" | "warning" | "critical" = "optimal";
   if (v.ai_risk_level === "MEDIUM") status = "warning";
   if (v.ai_risk_level === "HIGH") status = "critical";
 
@@ -23,18 +23,17 @@ export function normalizeDashboardVehicle(v: any) {
     id: v.id,
     name: v.name,
     registration: v.registration_number,
-    mileage: v.mileage,
-    fuel: v.fuel_level,
+    mileage: v.mileage ?? 0,
+    fuelLevel: v.fuel_level ?? 0,
 
-    // 🔥 AI-derived fields
     health,
     status,
-    riskLevel: v.ai_risk_level,
-    failureProbability: v.ai_failure_probability,
-    affectedComponent: v.ai_component,
-    confidence: v.ai_confidence,
-    lastAnalyzed: v.ai_last_analyzed,
-
-    nextService: v.next_service_date ?? null
+    riskLevel: v.ai_risk_level ?? null,
+    failureProbability: v.ai_failure_probability ?? null,
+    affectedComponent: v.ai_component ?? null,
+    confidence: v.ai_confidence ?? null,
+    lastAnalyzed: v.ai_last_analyzed ?? null,
+    lastService: v.last_service_date ?? null,
+    nextService: v.next_service_date ?? null,
   };
 }

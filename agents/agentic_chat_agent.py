@@ -1,39 +1,61 @@
 from agents.llm import call_llm
 from datetime import date
 
-def agentic_chat_agent(user_message, vehicle=None, appointment=None):
+
+def agentic_chat_agent(user_message, vehicle=None, vehicles_context="", appointment_data=None):
     try:
-        prompt = f"""
-You are an AI vehicle service assistant.
+        appt_info = ""
+        if appointment_data:
+            appt_info = (
+                f"\n\nACTION TAKEN: An appointment has been automatically booked:\n"
+                f"- Vehicle: {appointment_data['vehicle']}\n"
+                f"- Date: {appointment_data['date']} at {appointment_data['time']}\n"
+                f"- Service: {appointment_data['service_type']}\n"
+                f"- Urgency: {appointment_data['urgency']}\n"
+                f"Confirm this booking enthusiastically in your reply."
+            )
 
-User question:
-{user_message}
+        vehicle_info = "No specific vehicle selected."
+        if vehicle:
+            prob = int((vehicle.ai_failure_probability or 0) * 100)
+            vehicle_info = (
+                f"{vehicle.name}: risk level={vehicle.ai_risk_level or 'not analysed'}, "
+                f"engine failure probability={prob}%"
+                + (f", affected component: {vehicle.ai_component}" if vehicle.ai_component else "")
+            )
 
-Vehicle info:
-{vehicle}
+        prompt = f"""You are an AI vehicle maintenance assistant. Be helpful, concise, and friendly.
 
-Appointment info:
-{appointment}
+User message: {user_message}
 
-Give a clear, helpful, short answer.
+Selected vehicle: {vehicle_info}
+
+All user vehicles:
+{vehicles_context if vehicles_context else "No vehicles registered yet."}{appt_info}
+
+Guidelines:
+- If an appointment was booked, confirm it clearly with the date/time/vehicle.
+- If the user asks about risk or health, explain it in plain language using the numbers above.
+- If risk is HIGH, strongly recommend immediate servicing.
+- Keep response under 150 words.
 """
-
-        response = call_llm(prompt)
-        return response
+        return call_llm(prompt)
 
     except Exception:
-        # 🔁 FALLBACK LOGIC (VERY IMPORTANT)
-        if appointment and appointment.appointment_date < date.today():
-            return "This appointment is already past, so the service should be completed."
+        if appointment_data:
+            return (
+                f"I've booked a service appointment for {appointment_data['vehicle']} "
+                f"on {appointment_data['date']} at {appointment_data['time']}. "
+                f"Urgency: {appointment_data['urgency']}. You can view it in your appointments."
+            )
 
         if vehicle and vehicle.ai_risk_level == "HIGH":
             return (
-                "Your vehicle shows high risk indicators. "
-                "Delaying service may increase the chance of breakdown. "
-                "I strongly recommend rescheduling soon."
+                "Your vehicle shows HIGH risk indicators. "
+                "Immediate servicing is strongly recommended to prevent breakdown."
             )
 
         return (
-            "Based on current data, the situation does not appear critical, "
-            "but timely servicing is always safer."
+            "I'm here to help with your vehicle maintenance. "
+            "Try asking about your vehicle's health, or say 'book an appointment' to schedule a service."
         )

@@ -1,9 +1,8 @@
 'use client';
 
-import { Car, AlertTriangle, CheckCircle, Battery, Thermometer, Zap, Settings,Calendar } from 'lucide-react';
+import { Car, AlertTriangle, CheckCircle, Battery, Thermometer, Zap, Settings, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { fetchWithAuth } from '@/lib/fetchWithAuth';
+
 interface VehicleCardProps {
   vehicle: {
     id: number;
@@ -17,24 +16,10 @@ interface VehicleCardProps {
     fuelLevel: number;
   };
 }
-const API_BASE = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
 
 export default function VehicleCard({ vehicle }: VehicleCardProps) {
   const router = useRouter();
-const [running, setRunning] = useState(false);
 
-  const runAI = async () => {
-    try {
-      setRunning(true);
-      await fetchWithAuth(`${API_BASE}/vehicles/run/${vehicle.id}`, { method: "POST" });
-      // refresh dashboard data
-      window.location.reload();
-    } catch (err) {
-      console.error("AI run failed", err);
-    } finally {
-      setRunning(false);
-    }
-  };
   const getStatusColor = () => {
     switch (vehicle.status) {
       case 'optimal': return 'border-green-500/50 bg-green-500/10';
@@ -55,20 +40,20 @@ const [running, setRunning] = useState(false);
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
     });
   };
 
-const getDaysUntilService = () => {
-  if (!vehicle.nextService) return null;
+  const getDaysUntilService = () => {
+    if (!vehicle.nextService) return null;
+    const today = new Date();
+    const serviceDate = new Date(vehicle.nextService);
+    const diffTime = serviceDate.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
 
-  const today = new Date();
-  const serviceDate = new Date(vehicle.nextService);
-  const diffTime = serviceDate.getTime() - today.getTime();
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-};
+  const daysUntilService = getDaysUntilService();
 
-const daysUntilService = getDaysUntilService();
   return (
     <div className={`bg-gray-800/30 rounded-2xl p-5 border ${getStatusColor()} hover:border-blue-500/50 transition-all duration-300`}>
       {/* Header */}
@@ -82,7 +67,6 @@ const daysUntilService = getDaysUntilService();
             <p className="text-sm text-gray-400">{vehicle.registration}</p>
           </div>
         </div>
-        
         <div className="flex items-center gap-2">
           {getStatusIcon()}
           <button className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
@@ -98,11 +82,11 @@ const daysUntilService = getDaysUntilService();
           <span className="font-semibold text-white">{vehicle.health}%</span>
         </div>
         <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-          <div 
+          <div
             className={`h-full ${
-              vehicle.health > 80 ? 'bg-linear-to-r from-green-500 to-emerald-500' :
-              vehicle.health > 60 ? 'bg-linear-to-r from-yellow-500 to-amber-500' :
-              'bg-linear-to-r from-red-500 to-pink-500'
+              vehicle.health > 80 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
+              vehicle.health > 60 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
+              'bg-gradient-to-r from-red-500 to-pink-500'
             }`}
             style={{ width: `${vehicle.health}%` }}
           />
@@ -120,7 +104,7 @@ const daysUntilService = getDaysUntilService();
             <p className="text-sm font-semibold text-white">{vehicle.fuelLevel}%</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-cyan-900/30 rounded-lg">
             <Thermometer className="w-4 h-4 text-cyan-400" />
@@ -132,7 +116,7 @@ const daysUntilService = getDaysUntilService();
             </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <div className="p-1.5 bg-purple-900/30 rounded-lg">
             <Zap className="w-4 h-4 text-purple-400" />
@@ -140,34 +124,25 @@ const daysUntilService = getDaysUntilService();
           <div>
             <p className="text-xs text-gray-400">Last Service</p>
             <p className="text-sm font-semibold text-white">
-  {vehicle.lastService ? formatDate(vehicle.lastService) : "—"}
-</p>
-
+              {vehicle.lastService ? formatDate(vehicle.lastService) : '—'}
+            </p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {daysUntilService !== null && (
-  <>
-    <div className={`p-1.5 rounded-lg ${
-      daysUntilService <= 7 ? 'bg-red-900/30' : 'bg-green-900/30'
-    }`}>
-      <Calendar className={`w-4 h-4 ${
-        daysUntilService <= 7 ? 'text-red-400' : 'text-green-400'
-      }`} />
-    </div>
-
-    <div>
-      <p className="text-xs text-gray-400">Next Service</p>
-      <p className={`text-sm font-semibold ${
-        daysUntilService <= 7 ? 'text-red-400' : 'text-green-400'
-      }`}>
-        in {daysUntilService} days
-      </p>
-    </div>
-  </>
-)}
-
+            <>
+              <div className={`p-1.5 rounded-lg ${daysUntilService <= 7 ? 'bg-red-900/30' : 'bg-green-900/30'}`}>
+                <Calendar className={`w-4 h-4 ${daysUntilService <= 7 ? 'text-red-400' : 'text-green-400'}`} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Next Service</p>
+                <p className={`text-sm font-semibold ${daysUntilService <= 7 ? 'text-red-400' : 'text-green-400'}`}>
+                  in {daysUntilService} days
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -175,26 +150,16 @@ const daysUntilService = getDaysUntilService();
       <div className="flex gap-2">
         <button
           onClick={() => router.push(`/dashboard/user/vehicles/${vehicle.id}`)}
-          className="flex-1 bg-linear-to-r from-blue-600 to-cyan-600 text-white py-2.5 rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+          className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-2.5 rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/30 transition-all"
         >
           View Details
         </button>
-        
         <button
-          onClick={() => router.push(`/dashboard/user/services?vehicle=${vehicle.id}`)}
-          className="px-4 py-2.5 bg-gray-800 text-gray-300 rounded-xl font-medium hover:bg-gray-700 transition-colors"
+          onClick={() => router.push(`/dashboard/user/analysis?vehicle_id=${vehicle.id}`)}
+          className="flex-1 py-2.5 bg-gray-700 text-white rounded-xl font-medium hover:bg-gray-600 transition-colors"
         >
-          Service
+          Run AI Analysis
         </button>
-         <button
-        onClick={runAI}
-        disabled={running}
-        className="mt-4 w-full px-4 py-2 rounded-lg
-                   bg-blue-600 hover:bg-blue-500
-                   disabled:bg-gray-600"
-      >
-        {running ? "Running AI..." : "Run AI Analysis"}
-      </button>
       </div>
     </div>
   );
