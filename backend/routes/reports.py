@@ -7,6 +7,7 @@ from backend.models.vehicle import Vehicle
 from backend.auth.dependencies import get_current_user
 from backend.models.user import User
 from agents.llm import call_llm
+from backend.services.vehicle_analysis import ensure_vehicle_analysis, repair_duplicate_vehicle_analyses
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -162,6 +163,7 @@ def get_rca(
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
+    ensure_vehicle_analysis(vehicle, db)
     rca = _rca_with_llm(vehicle) or _rca_fallback(vehicle)
 
     return {
@@ -193,6 +195,7 @@ def get_my_vehicles_for_reports(
     user: User = Depends(get_current_user),
 ):
     vehicles = db.query(Vehicle).filter(Vehicle.user_id == user.id).all()
+    repair_duplicate_vehicle_analyses(vehicles, db)
     return [
         {
             "id": v.id,

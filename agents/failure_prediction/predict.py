@@ -34,9 +34,8 @@ def load_model():
             except Exception as exc:
                 print(f"Failed to load {model_path}: {exc}")
 
-    print("Model file not found, using fallback")
-    fallback_model, fallback_scaler = create_fallback_model()
-    return fallback_model, fallback_scaler, "fallback"
+    print("Model file not found, using heuristic fallback")
+    return None, None, "heuristic"
 
 
 def create_fallback_model():
@@ -60,9 +59,9 @@ def create_fallback_model():
 try:
     model, scaler, MODEL_STATUS = load_model()
 except Exception as exc:
-    print(f"Prediction model initialization failed, using fallback: {exc}")
-    model, scaler = create_fallback_model()
-    MODEL_STATUS = "fallback"
+    print(f"Prediction model initialization failed, using heuristic fallback: {exc}")
+    model, scaler = None, None
+    MODEL_STATUS = "heuristic"
 
 
 def predict_failure(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -93,9 +92,12 @@ def predict_failure(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
             except (ValueError, TypeError):
                 features.append(defaults[feature])
 
-        features_array = np.array([features])
-        features_scaled = scaler.transform(features_array)
-        probability = float(model.predict_proba(features_scaled)[0][1])
+        if model is not None and scaler is not None:
+            features_array = np.array([features])
+            features_scaled = scaler.transform(features_array)
+            probability = float(model.predict_proba(features_scaled)[0][1])
+        else:
+            probability = _heuristic_probability(dict(zip(feature_order, features)))
 
         if probability > 0.7:
             risk = "HIGH"
@@ -130,3 +132,22 @@ def predict_failure(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
             "model_status": "error",
             "input_features": sensor_data,
         }
+
+
+def _heuristic_probability(features: Dict[str, float]) -> float:
+    rpm = features["engine_rpm"]
+    oil_pressure = features["lub_oil_pressure"]
+    fuel_pressure = features["fuel_pressure"]
+    coolant_pressure = features["coolant_pressure"]
+    oil_temp = features["lub_oil_temp"]
+    coolant_temp = features["coolant_temp"]
+
+    score = 0.08
+    score += max(0, rpm - 2500) / 7000 * 0.18
+    score += max(0, 2.2 - oil_pressure) / 2.2 * 0.24
+    score += max(0, 2.4 - fuel_pressure) / 2.4 * 0.10
+    score += max(0, 1.3 - coolant_pressure) / 1.3 * 0.12
+    score += max(0, oil_temp - 90) / 70 * 0.16
+    score += max(0, coolant_temp - 85) / 65 * 0.18
+    score += ((rpm % 97) / 97) * 0.04
+    return round(max(0.03, min(0.92, score)), 3)

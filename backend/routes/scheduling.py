@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 import io
+from hashlib import sha256
 
 from backend.session import get_db
 from backend.models.vehicle import Vehicle
@@ -14,6 +15,7 @@ from backend.auth.dependencies import get_current_user
 
 from agents.agentic_scheduling_agent import agentic_scheduling_agent
 from agents.reschedule_warning_agent import reschedule_warning_agent
+from backend.services.vehicle_analysis import ensure_vehicle_analysis
 
 router = APIRouter(prefix="/schedule", tags=["Scheduling"])
 
@@ -37,6 +39,8 @@ def get_schedule_suggestion(
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
+    ensure_vehicle_analysis(vehicle, db)
+
     vehicle_state = {
         "risk_level": vehicle.ai_risk_level,
         "failure_probability": vehicle.ai_failure_probability,
@@ -49,15 +53,23 @@ def get_schedule_suggestion(
     reasoning = decision.get("reason", "Based on vehicle health analysis") if isinstance(decision, dict) else str(decision)
     confidence = decision.get("confidence", 0.7) if isinstance(decision, dict) else 0.7
 
+    probability = vehicle.ai_failure_probability
     if urgency == "HIGH":
         window = [1, 3]
-        days_ahead = 2
+        days_ahead = 1 if (probability or 0) >= 0.85 else 2
     elif urgency == "MEDIUM":
         window = [4, 7]
-        days_ahead = 5
+        if probability is not None:
+            days_ahead = max(window[0], min(window[1], round(8 - probability * 7)))
+        else:
+            days_ahead = 5
     else:
         window = [8, 14]
-        days_ahead = 10
+        if probability is not None:
+            days_ahead = max(window[0], min(window[1], round(15 - probability * 14)))
+        else:
+            seed = int(sha256(str(vehicle.id).encode("utf-8")).hexdigest()[:2], 16)
+            days_ahead = window[0] + seed % (window[1] - window[0] + 1)
 
     suggested_date = (date.today() + timedelta(days=days_ahead)).isoformat()
 

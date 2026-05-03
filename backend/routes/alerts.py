@@ -5,6 +5,7 @@ from backend.session import get_db
 from backend.models.vehicle import Vehicle
 from backend.models.user import User
 from backend.auth.dependencies import get_current_user
+from backend.services.vehicle_analysis import repair_duplicate_vehicle_analyses
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -79,10 +80,12 @@ def get_alerts_me(
     user: User = Depends(get_current_user),
 ):
     vehicles = db.query(Vehicle).filter(Vehicle.user_id == user.id).all()
+    repair_duplicate_vehicle_analyses(vehicles, db)
     return _build_alerts(vehicles)
 
 
 @router.get("/{user_id}")
 def get_alerts(user_id: str, db: Session = Depends(get_db)):
     vehicles = db.query(Vehicle).filter(Vehicle.user_id == user_id).all()
+    repair_duplicate_vehicle_analyses(vehicles, db)
     return _build_alerts(vehicles)

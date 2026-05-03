@@ -5,6 +5,7 @@ from backend.auth.dependencies import get_current_user
 from backend.models.user import User
 from backend.models.vehicle import Vehicle
 from backend.session import get_db
+from backend.services.vehicle_analysis import repair_duplicate_vehicle_analyses
 
 router = APIRouter(prefix="/vehicles", tags=["Vehicle Health"])
 
@@ -15,6 +16,7 @@ def vehicle_health_me(
     user: User = Depends(get_current_user),
 ):
     vehicles = db.query(Vehicle).filter(Vehicle.user_id == user.id).all()
+    repair_duplicate_vehicle_analyses(vehicles, db)
     result = []
 
     for vehicle in vehicles:

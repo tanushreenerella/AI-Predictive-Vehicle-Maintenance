@@ -9,6 +9,7 @@ from backend.models.vehicle import Vehicle
 from backend.auth.dependencies import get_current_user
 from backend.models.user import User
 from agents.failure_prediction.predict import predict_failure
+from backend.services.vehicle_analysis import apply_vehicle_analysis
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
 
@@ -64,12 +65,7 @@ def run_analysis(
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
-    result = predict_failure(sensor_data.dict())
-    vehicle.ai_risk_level = result["riskLevel"]
-    vehicle.ai_failure_probability = result["failureProbability"]
-    vehicle.ai_component = result.get("component")
-    vehicle.ai_last_analyzed = datetime.utcnow()
-    db.commit()
+    result = apply_vehicle_analysis(vehicle, db, sensor_data.dict())
 
     return {
         "status": "success",
