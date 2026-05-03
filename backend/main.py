@@ -15,6 +15,7 @@ from backend.routes.scheduling import router as scheduling_router
 from backend.routes.agent_chat import router as agent_chat_router
 from backend.routes.predict import router as predict_router
 from backend.routes.analyze_route import router as analyze_router
+from backend.routes.reports import router as reports_router
 Base.metadata.create_all(bind=engine)
 
 _ORIGIN_RE = re.compile(r"https?://(localhost(:\d+)?|[a-zA-Z0-9-]+\.vercel\.app)")
@@ -65,4 +66,5 @@ app.include_router(scheduling_router)
 app.include_router(agent_chat_router)
 app.include_router(predict_router)
 app.include_router(analyze_router)
+app.include_router(reports_router)
 
