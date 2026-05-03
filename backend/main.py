@@ -1,3 +1,4 @@
+import re
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -16,13 +17,13 @@ from backend.routes.predict import router as predict_router
 from backend.routes.analyze_route import router as analyze_router
 Base.metadata.create_all(bind=engine)
 
-ALLOWED_ORIGINS = ["http://localhost:3000", "https://ai-predictive-vehicle-maintenance.vercel.app"]
+_ORIGIN_RE = re.compile(r"https?://(localhost(:\d+)?|[a-zA-Z0-9-]+\.vercel\.app)")
 
 app = FastAPI(title="Predictive Maintenance API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=_ORIGIN_RE.pattern,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -30,7 +31,7 @@ app.add_middleware(
 
 def _cors_headers(request: Request) -> dict:
     origin = request.headers.get("origin", "")
-    if origin in ALLOWED_ORIGINS:
+    if _ORIGIN_RE.fullmatch(origin):
         return {"Access-Control-Allow-Origin": origin, "Access-Control-Allow-Credentials": "true"}
     return {}
 
