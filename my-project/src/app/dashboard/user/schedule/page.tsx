@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { Bot, Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
 
-const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
 const SERVICE_TYPES = [
   'General Checkup',
@@ -27,10 +27,20 @@ type Suggestion = {
   agent: string;
 };
 
+type VehicleHealth = {
+  id: string;
+  name: string;
+  model: string;
+  health?: number | null;
+  ai_failure_probability?: number | null;
+  failure_probability?: number | null;
+  ai_risk_level?: string | null;
+};
+
 export default function ScheduleAppointmentPage() {
   const router = useRouter();
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
+  const [vehicles, setVehicles] = useState<VehicleHealth[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleHealth | null>(null);
   const [suggestion, setSuggestion] = useState<Suggestion | null>(null);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [suggestionError, setSuggestionError] = useState(false);
@@ -49,7 +59,7 @@ export default function ScheduleAppointmentPage() {
       .catch(() => router.replace('/login'));
   }, [router]);
 
-  const selectVehicle = async (vehicle: any) => {
+  const selectVehicle = async (vehicle: VehicleHealth) => {
     setSelectedVehicle(vehicle);
     setSuggestion(null);
     setSuggestionError(false);
@@ -72,6 +82,15 @@ export default function ScheduleAppointmentPage() {
     u === 'HIGH' ? 'bg-red-600/20 text-red-400 border-red-600/40'
     : u === 'MEDIUM' ? 'bg-yellow-600/20 text-yellow-400 border-yellow-600/40'
     : 'bg-green-600/20 text-green-400 border-green-600/40';
+
+  const healthPercent = (vehicle: VehicleHealth) => {
+    if (typeof vehicle.health === 'number') return vehicle.health;
+    const probability = vehicle.ai_failure_probability ?? vehicle.failure_probability;
+    if (typeof probability === 'number') {
+      return Math.max(0, Math.min(100, Math.round(100 - probability * 100)));
+    }
+    return null;
+  };
 
   const handleSubmit = async () => {
     if (!selectedVehicle || !apptDate || !apptTime) {
@@ -164,7 +183,14 @@ export default function ScheduleAppointmentPage() {
               >
                 <p className="font-semibold text-white">{v.name}</p>
                 <p className="text-sm text-gray-400">{v.model}</p>
-                <p className="text-sm mt-1 text-gray-300">Health: {v.health}%</p>
+                <p className="text-sm mt-1 text-gray-300">
+                  Health: {healthPercent(v) === null ? 'Run analysis' : `${healthPercent(v)}%`}
+                </p>
+                {typeof (v.ai_failure_probability ?? v.failure_probability) === 'number' && (
+                  <p className="text-xs mt-1 text-gray-500">
+                    Failure probability: {Math.round((v.ai_failure_probability ?? v.failure_probability ?? 0) * 100)}%
+                  </p>
+                )}
               </button>
             ))}
           </div>

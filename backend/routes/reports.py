@@ -12,6 +12,26 @@ router = APIRouter(prefix="/reports", tags=["Reports"])
 
 
 def _rca_fallback(vehicle: Vehicle) -> dict:
+    if vehicle.ai_failure_probability is None or vehicle.ai_risk_level is None:
+        return {
+            "root_cause": "Analysis required",
+            "contributing_factors": [
+                "No ML sensor analysis has been saved for this vehicle yet",
+                "RCA needs vehicle-specific sensor readings before it can identify causes",
+            ],
+            "recommendations": [
+                "Run AI Analysis for this specific vehicle using its current sensor readings",
+                "Return to this RCA report after analysis completes",
+            ],
+            "severity": "Unknown",
+            "action_timeline": "Run analysis first",
+            "summary": (
+                f"No vehicle-specific ML analysis exists yet for {vehicle.name}. "
+                "The system will not reuse another vehicle's RCA or generate a misleading report."
+            ),
+            "generated_by": "rule-based",
+        }
+
     risk = vehicle.ai_risk_level or "LOW"
     prob = vehicle.ai_failure_probability or 0
     component = vehicle.ai_component or "Engine"
@@ -91,6 +111,9 @@ def _rca_fallback(vehicle: Vehicle) -> dict:
 
 
 def _rca_with_llm(vehicle: Vehicle) -> dict | None:
+    if vehicle.ai_failure_probability is None or vehicle.ai_risk_level is None:
+        return None
+
     try:
         prob_pct = int((vehicle.ai_failure_probability or 0) * 100)
         prompt = f"""You are an expert vehicle diagnostics engineer performing a Root Cause Analysis (RCA).
@@ -153,6 +176,11 @@ def get_rca(
         "risk_level": vehicle.ai_risk_level or "LOW",
         "failure_probability": vehicle.ai_failure_probability or 0,
         "component": vehicle.ai_component or "Engine",
+        "health": (
+            max(0, min(100, round(100 - vehicle.ai_failure_probability * 100)))
+            if vehicle.ai_failure_probability is not None
+            else None
+        ),
         "last_analyzed": vehicle.ai_last_analyzed.isoformat() if vehicle.ai_last_analyzed else None,
         "generated_at": datetime.utcnow().isoformat(),
         **rca,
@@ -172,6 +200,11 @@ def get_my_vehicles_for_reports(
             "model": v.model,
             "ai_risk_level": v.ai_risk_level,
             "ai_failure_probability": v.ai_failure_probability,
+            "health": (
+                max(0, min(100, round(100 - v.ai_failure_probability * 100)))
+                if v.ai_failure_probability is not None
+                else None
+            ),
             "ai_last_analyzed": v.ai_last_analyzed.isoformat() if v.ai_last_analyzed else None,
         }
         for v in vehicles

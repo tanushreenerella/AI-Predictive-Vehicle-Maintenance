@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import List
@@ -7,7 +8,7 @@ from backend.session import get_db
 from backend.models.vehicle import Vehicle
 from backend.auth.dependencies import get_current_user
 from backend.models.user import User
-from backend.services.orchestrator_service import run_vehicle_ai
+from agents.failure_prediction.predict import predict_failure
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
 
 
@@ -23,6 +24,15 @@ class VehicleCreate(BaseModel):
 
 class VehicleResponse(VehicleCreate):
     id: str
+
+
+class SensorData(BaseModel):
+    engine_rpm: float
+    lub_oil_pressure: float
+    fuel_pressure: float
+    coolant_pressure: float
+    lub_oil_temp: float
+    coolant_temp: float
 
 
 @router.post("", response_model=VehicleResponse)
@@ -41,6 +51,7 @@ def get_user_vehicles(user_id: str, db: Session = Depends(get_db)):
 @router.post("/run/{vehicle_id}")
 def run_analysis(
     vehicle_id: str,
+    sensor_data: SensorData,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
@@ -53,20 +64,24 @@ def run_analysis(
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
-    sensor_data = {
-        "engine_rpm": 3200,
-        "lub_oil_pressure": 1.8,
-        "fuel_pressure": 2.4,
-        "coolant_pressure": 1.2,
-        "lub_oil_temp": 98,
-        "coolant_temp": 92
-    }
-
-    result = run_vehicle_ai(vehicle, sensor_data, db)
+    result = predict_failure(sensor_data.dict())
+    vehicle.ai_risk_level = result["riskLevel"]
+    vehicle.ai_failure_probability = result["failureProbability"]
+    vehicle.ai_component = result.get("component")
+    vehicle.ai_last_analyzed = datetime.utcnow()
+    db.commit()
 
     return {
         "status": "success",
         "vehicle_id": vehicle.id,
-        "ai_state": result["health_update"],
-        "report": result["ai_report"]
+        "ai_state": {
+            "risk_level": vehicle.ai_risk_level,
+            "failure_probability": vehicle.ai_failure_probability,
+            "critical_component": vehicle.ai_component,
+            "confidence": result.get("confidence"),
+            "estimated_failure_window": result.get("estimatedFailureWindow"),
+            "model_status": result.get("model_status"),
+            "input_features": result.get("input_features"),
+        },
+        "report": result,
     }

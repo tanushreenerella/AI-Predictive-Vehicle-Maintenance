@@ -1,15 +1,17 @@
-import numpy as np
-import pickle
 import os
-from typing import Dict, Any
+import pickle
+from typing import Any, Dict
 
-def _base_dir():
+import numpy as np
+
+
+def _base_dir() -> str:
     return os.path.dirname(os.path.abspath(__file__))
+
 
 def load_model():
     base = _base_dir()
 
-    # Try joblib first (committed to git), then pkl
     for ext in [".joblib", ".pkl"]:
         model_path = os.path.join(base, f"model{ext}")
         scaler_path = os.path.join(base, f"scaler{ext}")
@@ -18,44 +20,50 @@ def load_model():
             try:
                 if ext == ".joblib":
                     import joblib
-                    model = joblib.load(model_path)
-                    scaler = joblib.load(scaler_path)
-                else:
-                    with open(model_path, "rb") as f:
-                        model = pickle.load(f)
-                    with open(scaler_path, "rb") as f:
-                        scaler = pickle.load(f)
-                print(f"✅ Model loaded from {model_path}")
-                return model, scaler
-            except Exception as e:
-                print(f"❌ Failed to load {model_path}: {e}")
 
-    print("⚠️ Model file not found, using fallback")
-    return create_fallback_model()
+                    loaded_model = joblib.load(model_path)
+                    loaded_scaler = joblib.load(scaler_path)
+                else:
+                    with open(model_path, "rb") as model_file:
+                        loaded_model = pickle.load(model_file)
+                    with open(scaler_path, "rb") as scaler_file:
+                        loaded_scaler = pickle.load(scaler_file)
+
+                print(f"Model loaded from {model_path}")
+                return loaded_model, loaded_scaler, "production"
+            except Exception as exc:
+                print(f"Failed to load {model_path}: {exc}")
+
+    print("Model file not found, using fallback")
+    fallback_model, fallback_scaler = create_fallback_model()
+    return fallback_model, fallback_scaler, "fallback"
+
 
 def create_fallback_model():
     from sklearn.preprocessing import StandardScaler
     from xgboost import XGBClassifier
 
     np.random.seed(42)
-    X_dummy = np.random.randn(100, 6)
+    x_dummy = np.random.randn(100, 6)
     y_dummy = np.random.choice([0, 1], 100, p=[0.8, 0.2])
 
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_dummy)
+    fallback_scaler = StandardScaler()
+    x_scaled = fallback_scaler.fit_transform(x_dummy)
 
-    model = XGBClassifier(n_estimators=10, random_state=42)
-    model.fit(X_scaled, y_dummy)
+    fallback_model = XGBClassifier(n_estimators=10, random_state=42)
+    fallback_model.fit(x_scaled, y_dummy)
 
-    print("⚠️ Using fallback model")
-    return model, scaler
+    print("Using fallback model")
+    return fallback_model, fallback_scaler
+
 
 try:
-    model, scaler = load_model()
-    MODEL_LOADED = True
-except Exception:
+    model, scaler, MODEL_STATUS = load_model()
+except Exception as exc:
+    print(f"Prediction model initialization failed, using fallback: {exc}")
     model, scaler = create_fallback_model()
-    MODEL_LOADED = False
+    MODEL_STATUS = "fallback"
+
 
 def predict_failure(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
     try:
@@ -78,21 +86,21 @@ def predict_failure(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
         }
 
         features = []
-        for feat in feature_order:
-            val = sensor_data.get(feat, defaults[feat])
+        for feature in feature_order:
+            value = sensor_data.get(feature, defaults[feature])
             try:
-                features.append(float(val))
+                features.append(float(value))
             except (ValueError, TypeError):
-                features.append(defaults[feat])
+                features.append(defaults[feature])
 
         features_array = np.array([features])
         features_scaled = scaler.transform(features_array)
-        prob = float(model.predict_proba(features_scaled)[0][1])
+        probability = float(model.predict_proba(features_scaled)[0][1])
 
-        if prob > 0.7:
+        if probability > 0.7:
             risk = "HIGH"
             window = "1-3 days"
-        elif prob > 0.4:
+        elif probability > 0.4:
             risk = "MEDIUM"
             window = "4-7 days"
         else:
@@ -101,22 +109,24 @@ def predict_failure(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
 
         return {
             "component": "Engine",
-            "failureProbability": round(prob, 3),
+            "failureProbability": round(probability, 3),
             "riskLevel": risk,
             "estimatedFailureWindow": window,
-            "confidence": round(min(0.95, prob + 0.1), 2),
+            "confidence": round(min(0.95, probability + 0.1), 2),
             "message": f"Analysis complete. Risk level: {risk}",
-            "model_status": "production" if MODEL_LOADED else "fallback",
+            "model_status": MODEL_STATUS,
+            "input_features": dict(zip(feature_order, features)),
         }
 
-    except Exception as e:
-        print(f"❌ Prediction error: {e}")
+    except Exception as exc:
+        print(f"Prediction error: {exc}")
         return {
             "component": "Engine",
             "failureProbability": 0.5,
             "riskLevel": "UNKNOWN",
             "estimatedFailureWindow": "Unknown",
             "confidence": 0.5,
-            "message": f"Error in prediction: {str(e)}",
+            "message": f"Error in prediction: {str(exc)}",
             "model_status": "error",
+            "input_features": sensor_data,
         }
