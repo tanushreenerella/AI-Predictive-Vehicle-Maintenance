@@ -38,15 +38,15 @@ export default function AddVehiclePage() {
   ] as const;
 
 return (
-  <div className="flex justify-center pt-10 px-6">
-    <div className="w-full max-w-md">
-      <button
+  <div className="flex justify-center px-6">
+     <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </button>
+    <div className="w-full max-w-md">
 
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white">Add Vehicle</h1>
