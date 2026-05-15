@@ -37,26 +37,34 @@ export default function AddVehiclePage() {
     { name: "registrationNumber", label: "Registration Number", placeholder: "e.g. ABC1234", icon: Hash, type: "text" },
   ] as const;
 
-  return (
-    <div className="max-w-md">
+return (
+  <div className="flex justify-center pt-10 px-6">
+    <div className="w-full max-w-md">
       <button
         onClick={() => router.back()}
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 mb-6 transition-colors"
       >
-        <ArrowLeft className="w-4 h-4" /> Back
+        <ArrowLeft className="w-4 h-4" />
+        Back
       </button>
 
       <div className="mb-6">
         <h1 className="text-xl font-bold text-white">Add Vehicle</h1>
-        <p className="text-gray-500 text-sm mt-1">Register a vehicle to start monitoring its health.</p>
+        <p className="text-gray-500 text-sm mt-1">
+          Register a vehicle to start monitoring its health.
+        </p>
       </div>
 
       <div className="bg-gray-800/40 border border-gray-700/60 rounded-2xl p-5 space-y-4">
         {fields.map(({ name, label, placeholder, icon: Icon, type }) => (
           <div key={name}>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">{label}</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">
+              {label}
+            </label>
+
             <div className="relative">
               <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+
               <input
                 name={name}
                 type={type}
@@ -77,6 +85,7 @@ export default function AddVehiclePage() {
           >
             {loading ? "Saving..." : "Save Vehicle"}
           </button>
+
           <button
             onClick={() => router.back()}
             className="px-5 py-2.5 bg-gray-700/50 hover:bg-gray-700 text-gray-300 text-sm rounded-xl transition-colors"
@@ -86,5 +95,6 @@ export default function AddVehiclePage() {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }
