@@ -91,11 +91,15 @@ def predict_failure(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
                 features.append(float(value))
             except (ValueError, TypeError):
                 features.append(defaults[feature])
+        rpm_oil_ratio = features[0] / (features[1] + 0.001)
+        temp_diff = features[4] - features[5]
+        pressure_total = features[2] + features[3] + features[1]
+        features = features + [rpm_oil_ratio, temp_diff, pressure_total]
 
         if model is not None and scaler is not None:
             features_array = np.array([features])
             features_scaled = scaler.transform(features_array)
-            probability = float(model.predict_proba(features_scaled)[0][1])
+            probability = float(model.predict_proba(features_scaled)[0][0])
         else:
             probability = _heuristic_probability(dict(zip(feature_order, features)))
 
