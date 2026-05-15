@@ -77,14 +77,14 @@ export default function SignupPage() {
     <div className="min-h-screen bg-linear-to-br from-gray-900 via-blue-900/20 to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-linear-to-br from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Car className="w-8 h-8 text-white" />
+        <div className="text-center mb-6">
+          <div className="w-14 h-14 bg-linear-to-br from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/20">
+            <Car className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-3xl font-bold bg-linear-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold bg-linear-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             Join ProactiveAI
           </h1>
-          <p className="text-gray-400 mt-2">Register for intelligent vehicle maintenance</p>
+          <p className="text-gray-500 text-sm mt-1">Register for intelligent vehicle maintenance</p>
         </div>
 
         {/* Signup Card */}

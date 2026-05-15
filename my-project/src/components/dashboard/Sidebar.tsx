@@ -83,20 +83,20 @@ const handleLogout = async () => {
       {/* User Profile */}
       <div className="p-4 border-b border-blue-800/30">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-cyan-400 rounded-full flex items-center justify-center">
-            <span className="font-semibold text-white">
+          <div className="w-9 h-9 bg-linear-to-br from-blue-500 to-cyan-400 rounded-full flex items-center justify-center shrink-0">
+            <span className="font-bold text-white text-sm uppercase">
               {user?.email?.charAt(0) || 'U'}
             </span>
           </div>
           {!collapsed && (
-            <div className="flex-1">
-              <h3 className="font-semibold text-white truncate">{user?.email || 'User'}</h3>
-              <p className="text-xs text-gray-400">{user?.email}</p>
-              <div className="mt-1">
-                <span className="inline-block px-2 py-1 text-xs bg-blue-500/20 text-blue-400 rounded-full">
-                  {user?.role === 'admin' ? 'Administrator' : 'Vehicle Owner'}
-                </span>
-              </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-white truncate">
+                {user?.name || user?.email?.split('@')[0] || 'User'}
+              </p>
+              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+              <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-blue-500/15 text-blue-400 rounded-full border border-blue-500/20">
+                {user?.role === 'admin' ? 'Administrator' : 'Vehicle Owner'}
+              </span>
             </div>
           )}
         </div>
@@ -111,10 +111,10 @@ const handleLogout = async () => {
                 <div>
                   <button
                     onClick={() => toggleExpand(item.title)}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-colors ${
-                      pathname.startsWith(item.href)|| expandedItems.includes(item.title)
-                        ? 'bg-blue-900/30 text-blue-400'
-                        : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
+                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border-l-[3px] pl-2.25 ${
+                      pathname.startsWith(item.href) || expandedItems.includes(item.title)
+                        ? 'bg-blue-900/20 text-blue-400 border-blue-500'
+                        : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 border-transparent'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -147,16 +147,17 @@ const handleLogout = async () => {
               ) : (
                 <Link
                   href={item.href}
-                  className={`flex items-center gap-3 p-3 rounded-xl transition-colors relative ${
-                   pathname.startsWith(item.href)
-                      ? 'bg-blue-900/30 text-blue-400'
-                      : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-300'
+                  className={`flex items-center gap-3 p-3 rounded-xl transition-all relative ${
+                    pathname.startsWith(item.href)
+                      ? 'bg-blue-900/20 text-blue-400 border-l-[3px] border-blue-500 pl-2.25'
+                      : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 border-l-[3px] border-transparent pl-2.25'
                   }`}
                 >
                   {iconMap[item.icon]}
-                  {!collapsed && <span>{item.title}</span>}
-                  {item.badge && (
-                    <span className="absolute right-3 px-2 py-1 text-xs bg-red-500 text-white rounded-full">
+                  {!collapsed && <span className="text-sm font-medium">{item.title}</span>}
+                  {item.badge && !collapsed && (
+                    <span className="absolute right-3 flex items-center gap-1 text-xs text-blue-400 font-semibold">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                       {item.badge}
                     </span>
                   )}

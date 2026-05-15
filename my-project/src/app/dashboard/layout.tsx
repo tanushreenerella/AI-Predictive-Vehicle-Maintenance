@@ -90,22 +90,37 @@ export default function DashboardLayout({
   }
 
   return (
-   <div className="min-h-screen bg-gray-900">
-  <Sidebar
-    items={menuItems}
-    user={user}
-    collapsed={collapsed}
-    onToggle={() => setCollapsed(!collapsed)}
-  />
+    <div className="min-h-screen bg-gray-900">
+      <Sidebar
+        items={menuItems}
+        user={user}
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(!collapsed)}
+      />
 
-  <main
-    className={`transition-all duration-300 p-6 ${
-      collapsed ? 'ml-20' : 'ml-64'
-    }`}
-  >
-    {children}
-  </main>
-</div>
+      <div className={`transition-all duration-300 ${collapsed ? 'ml-20' : 'ml-64'}`}>
+        {/* Top bar */}
+        <header className="sticky top-0 z-10 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800 px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-gray-400">
+            <span className="text-gray-600">/</span>
+            <span className="text-gray-300 font-medium capitalize">
+              {user?.role === 'admin' ? 'Admin' : 'Dashboard'}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-lg border border-gray-700">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              <span className="text-xs text-gray-400">
+                {user?.name || user?.email?.split('@')[0] || 'User'}
+              </span>
+            </div>
+          </div>
+        </header>
 
+        <main className="p-6 min-h-[calc(100vh-57px)]">
+          {children}
+        </main>
+      </div>
+    </div>
   );
 }
