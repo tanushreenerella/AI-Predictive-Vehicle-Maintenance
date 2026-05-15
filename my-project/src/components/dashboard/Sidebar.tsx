@@ -115,25 +115,37 @@ const handleLogout = async () => {
               )}
               {item.subItems ? (
                 <div>
-                  <button
-                    onClick={() => toggleExpand(item.title)}
-                    className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border-l-[3px] pl-2.25 ${
-                      pathname.startsWith(item.href) || expandedItems.includes(item.title)
-                        ? 'bg-blue-900/20 text-blue-400 border-blue-500'
-                        : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
+                  <div className={`flex items-center rounded-xl border-l-[3px] overflow-hidden ${
+                    pathname.startsWith(item.href) || expandedItems.includes(item.title)
+                      ? 'border-blue-500'
+                      : 'border-transparent'
+                  }`}>
+                    <Link
+                      href={item.href}
+                      onClick={() => { if (!expandedItems.includes(item.title)) toggleExpand(item.title); }}
+                      className={`flex-1 flex items-center gap-3 pl-2.5 py-3 pr-1 transition-all text-sm font-medium ${
+                        pathname.startsWith(item.href) || expandedItems.includes(item.title)
+                          ? 'bg-blue-900/20 text-blue-400'
+                          : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200'
+                      }`}
+                    >
                       {iconMap[item.icon]}
                       {!collapsed && <span>{item.title}</span>}
-                    </div>
+                    </Link>
                     {!collapsed && (
-                      <ChevronRight className={`w-4 h-4 transition-transform ${
-                        expandedItems.includes(item.title) ? 'rotate-90' : ''
-                      }`} />
+                      <button
+                        onClick={() => toggleExpand(item.title)}
+                        className={`px-2.5 py-3 transition-all ${
+                          pathname.startsWith(item.href) || expandedItems.includes(item.title)
+                            ? 'bg-blue-900/20 text-blue-400'
+                            : 'text-gray-500 hover:bg-gray-800/50 hover:text-gray-300'
+                        }`}
+                      >
+                        <ChevronRight className={`w-4 h-4 transition-transform ${expandedItems.includes(item.title) ? 'rotate-90' : ''}`} />
+                      </button>
                     )}
-                  </button>
-                  
+                  </div>
+
                   {!collapsed && expandedItems.includes(item.title) && (
                     <ul className="ml-8 mt-2 space-y-1">
                       {item.subItems.map((subItem) => (

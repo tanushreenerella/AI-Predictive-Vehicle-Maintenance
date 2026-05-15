@@ -90,6 +90,7 @@ export default function AgentChatPage() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [conversationState, setConversationState] = useState<ConversationState | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
     fetchWithAuth(`${API_BASE}/vehicles/health/me`)
@@ -102,6 +103,10 @@ export default function AgentChatPage() {
   }, []);
 
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
