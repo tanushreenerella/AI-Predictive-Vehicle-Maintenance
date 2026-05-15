@@ -79,12 +79,21 @@ def diagnostic_node(state: VehicleAgentState) -> Dict[str, Any]:
     enough = tool_result.get("enough_context", False)
 
     return {
-        "messages": [AIMessage(content=question)],
+        "messages": [AIMessage(content=question)] if not enough else [],
         "symptom": symptom,
         "diagnostic_answers": answers,
+        "issue_context": {
+            "symptom": symptom,
+            "answers": answers,
+            "summary": f"{symptom}. " + "; ".join([a.get("answer", "") for a in answers])
+        } if enough else None,
         "phase": "recommended" if enough else "diagnosing",
-        "next_agent": "recommendation" if enough else "supervisor",
     }
+
+def route_from_diagnostic(state: VehicleAgentState) -> str:
+    if state.get("phase") == "recommended":
+        return "recommendation_agent"
+    return END
 
 def sensor_node(state: VehicleAgentState) -> Dict[str, Any]:
     sensor_data = state.get("sensor_data") or {}
@@ -108,7 +117,11 @@ def sensor_node(state: VehicleAgentState) -> Dict[str, Any]:
 
 
 def recommendation_node(state: VehicleAgentState) -> Dict[str, Any]:
-    issue_context = state.get("issue_context") or {"symptom": state.get("symptom", "unknown")}
+    issue_context = state.get("issue_context") or {
+        "symptom": state.get("symptom", "unknown"),
+        "answers": state.get("diagnostic_answers", []),
+        "summary": state.get("symptom", "unknown"),
+    }
     risk_level = state.get("risk_level") or "MEDIUM"
 
     tool_result = generate_service_recommendation.invoke({
@@ -187,10 +200,15 @@ def build_vehicle_graph():
         },
     )
 
-    graph.add_edge("diagnostic_agent",END)
-    graph.add_edge("sensor_agent", END)
+    graph.add_conditional_edges(
+    "diagnostic_agent",
+    route_from_diagnostic,
+    {"recommendation_agent": "recommendation_agent", END: END},
+    )
+    graph.add_edge("sensor_agent", "recommendation_agent")
     graph.add_edge("recommendation_agent", END)
     graph.add_edge("scheduling_agent", END)
+
 
     return graph.compile()
 
