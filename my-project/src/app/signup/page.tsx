@@ -88,8 +88,8 @@ export default function SignupPage() {
         </div>
 
         {/* Signup Card */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-blue-800/30 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-2xl font-bold text-white mb-6">Create Account</h2>
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/60 rounded-2xl p-6 shadow-2xl">
+          <h2 className="text-xl font-bold text-white mb-4">Create Account</h2>
           
           {errors.length > 0 && (
             <div className="mb-6 p-4 bg-red-900/30 border border-red-700/50 rounded-lg">
@@ -105,7 +105,7 @@ export default function SignupPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* User Type Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-300">Register As</label>
@@ -153,7 +153,7 @@ export default function SignupPage() {
             </div>
 
             {/* Two Column Grid for Personal Info */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4">
               {/* Full Name */}
               <div className="space-y-2">
                 <label htmlFor="fullName" className="text-sm font-medium text-gray-300">
@@ -166,7 +166,7 @@ export default function SignupPage() {
                     type="text"
                     value={formData.fullName}
                     onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="John Doe"
                     required
                   />
@@ -185,7 +185,7 @@ export default function SignupPage() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="owner@example.com"
                     required
                   />
@@ -204,7 +204,7 @@ export default function SignupPage() {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="+1 (555) 123-4567"
                     required
                   />
@@ -224,7 +224,7 @@ export default function SignupPage() {
                       type="text"
                       value={formData.vehicleNumber}
                       onChange={(e) => setFormData({...formData, vehicleNumber: e.target.value.toUpperCase()})}
-                      className="w-full pl-10 pr-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                       placeholder="ABC1234"
                       required
                     />
@@ -234,7 +234,7 @@ export default function SignupPage() {
             </div>
 
             {/* Two Column Grid for Passwords */}
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4">
               {/* Password */}
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium text-gray-300">
@@ -246,7 +246,7 @@ export default function SignupPage() {
                     type={showPassword ? "text" : "password"}
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="••••••••"
                     required
                   />
@@ -272,7 +272,7 @@ export default function SignupPage() {
                     type={showPassword ? "text" : "password"}
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                    className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="••••••••"
                     required
                   />

@@ -78,8 +78,8 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-blue-800/30 rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-2xl font-bold text-white mb-6">Welcome Back</h2>
+        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/60 rounded-2xl p-6 shadow-2xl">
+          <h2 className="text-xl font-bold text-white mb-4">Welcome Back</h2>
           
           {errors.length > 0 && (
             <div className="mb-6 p-4 bg-red-900/30 border border-red-700/50 rounded-lg">
@@ -95,7 +95,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* User Type Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-300">Login As</label>
@@ -109,12 +109,12 @@ export default function LoginPage() {
                     onChange={(e) => setFormData({...formData, userType: e.target.value})}
                     className="sr-only"
                   />
-                  <div className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.userType === 'user' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-600'}`}>
-                    <div className="flex items-center gap-3">
-                      <User className={`w-5 h-5 ${formData.userType === 'user' ? 'text-blue-400' : 'text-gray-500'}`} />
+                  <div className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.userType === 'user' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-600'}`}>
+                    <div className="flex items-center gap-2.5">
+                      <User className={`w-4 h-4 ${formData.userType === 'user' ? 'text-blue-400' : 'text-gray-500'}`} />
                       <div>
-                        <div className="font-semibold text-white">Vehicle Owner</div>
-                        <div className="text-xs text-gray-400">Monitor your vehicles</div>
+                        <div className="font-semibold text-white text-sm">Vehicle Owner</div>
+                        <div className="text-xs text-gray-500">Monitor your vehicles</div>
                       </div>
                     </div>
                   </div>
@@ -129,12 +129,12 @@ export default function LoginPage() {
                     onChange={(e) => setFormData({...formData, userType: e.target.value})}
                     className="sr-only"
                   />
-                  <div className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${formData.userType === 'admin' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-600'}`}>
-                    <div className="flex items-center gap-3">
-                      <Key className={`w-5 h-5 ${formData.userType === 'admin' ? 'text-blue-400' : 'text-gray-500'}`} />
+                  <div className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.userType === 'admin' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-600'}`}>
+                    <div className="flex items-center gap-2.5">
+                      <Key className={`w-4 h-4 ${formData.userType === 'admin' ? 'text-blue-400' : 'text-gray-500'}`} />
                       <div>
-                        <div className="font-semibold text-white">Administrator</div>
-                        <div className="text-xs text-gray-400">System management</div>
+                        <div className="font-semibold text-white text-sm">Administrator</div>
+                        <div className="text-xs text-gray-500">System management</div>
                       </div>
                     </div>
                   </div>
@@ -152,7 +152,7 @@ export default function LoginPage() {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="owner@example.com"
                 required
               />
@@ -169,7 +169,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="••••••••"
                   required
                 />
