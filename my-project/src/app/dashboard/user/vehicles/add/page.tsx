@@ -38,19 +38,20 @@ export default function AddVehiclePage() {
   ] as const;
 
 return (
-  <div className="flex justify-center px-6">
-     <button
+  <div className="flex justify-center pt-4 px-6">
+    <div className="w-full max-w-md">
+      
+      <button
         onClick={() => router.back()}
-        className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-300 mb-6 transition-colors"
+        className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-white mb-4 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back
       </button>
-    <div className="w-full max-w-md">
 
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-white">Add Vehicle</h1>
-        <p className="text-gray-500 text-sm mt-1">
+        <h1 className="text-2xl font-bold text-white">Add Vehicle</h1>
+        <p className="text-gray-400 text-sm mt-1">
           Register a vehicle to start monitoring its health.
         </p>
       </div>
@@ -81,7 +82,7 @@ return (
           <button
             onClick={handleSubmit}
             disabled={loading}
-            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-50"
           >
             {loading ? "Saving..." : "Save Vehicle"}
           </button>
