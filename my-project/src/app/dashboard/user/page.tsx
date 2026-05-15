@@ -110,31 +110,30 @@ export default function UserDashboard() {
         {[
           {
             label: 'Total Vehicles', value: totalVehicles, icon: Car,
-            color: 'from-blue-900/40 to-blue-800/20 border-blue-800/40', iconColor: 'text-blue-400',
+            iconColor: 'text-blue-400',
           },
           {
             label: 'Vehicles at Risk', value: atRisk, icon: AlertTriangle,
-            color: 'from-red-900/30 to-red-800/10 border-red-800/30', iconColor: 'text-red-400',
+            iconColor: atRisk > 0 ? 'text-red-400' : 'text-gray-500',
             valueColor: atRisk > 0 ? 'text-red-400' : 'text-white',
           },
           {
             label: 'Fleet Health', value: `${avgHealth}%`, icon: Activity,
-            color: 'from-green-900/30 to-green-800/10 border-green-800/30', iconColor: 'text-green-400',
-            valueColor: avgHealth > 70 ? 'text-green-400' : avgHealth > 40 ? 'text-yellow-400' : 'text-red-400',
+            iconColor: avgHealth > 70 ? 'text-blue-400' : avgHealth > 40 ? 'text-yellow-400' : 'text-red-400',
+            valueColor: avgHealth > 70 ? 'text-white' : avgHealth > 40 ? 'text-yellow-400' : 'text-red-400',
           },
           {
             label: 'Active Alerts', value: alerts.length, icon: Calendar,
-            color: 'from-purple-900/30 to-purple-800/10 border-purple-800/30', iconColor: 'text-purple-400',
-
+            iconColor: 'text-blue-400',
           },
-        ].map(({ label, value, icon: Icon, color, iconColor, valueColor }) => (
-          <div key={label} className={`bg-linear-to-br ${color} border rounded-2xl p-5`}>
+        ].map(({ label, value, icon: Icon, iconColor, valueColor }) => (
+          <div key={label} className="bg-gray-800/40 border border-gray-700/60 rounded-2xl p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-gray-400 text-sm">{label}</p>
                 <p className={`text-3xl font-bold mt-2 ${valueColor || 'text-white'}`}>{value}</p>
               </div>
-              <div className="p-2 bg-black/20 rounded-xl">
+              <div className="p-2 bg-gray-700/50 rounded-xl">
                 <Icon className={`w-5 h-5 ${iconColor}`} />
               </div>
             </div>
@@ -181,30 +180,30 @@ export default function UserDashboard() {
           <div className="grid sm:grid-cols-2 gap-4">
             <button
               onClick={() => router.push('/dashboard/user/analysis')}
-              className="flex items-center gap-4 bg-linear-to-br from-blue-900/40 to-cyan-900/20 border border-blue-700/40 rounded-2xl p-5 hover:border-blue-500/60 transition-colors text-left"
+              className="flex items-center gap-4 bg-gray-800/40 border border-gray-700/60 rounded-2xl p-5 hover:border-gray-600 transition-colors text-left"
             >
-              <div className="p-3 bg-blue-500/20 rounded-xl">
-                <Activity className="w-6 h-6 text-blue-400" />
+              <div className="p-3 bg-gray-700/60 rounded-xl">
+                <Activity className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <p className="font-semibold text-white">AI Analysis</p>
-                <p className="text-gray-400 text-sm">Run ML prediction on sensor data</p>
+                <p className="font-semibold text-white text-sm">AI Analysis</p>
+                <p className="text-gray-500 text-xs">Run ML prediction on sensor data</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-gray-500 ml-auto shrink-0" />
+              <ArrowRight className="w-4 h-4 text-gray-600 ml-auto shrink-0" />
             </button>
 
             <button
               onClick={() => router.push('/dashboard/user/reports')}
-              className="flex items-center gap-4 bg-linear-to-br from-purple-900/40 to-pink-900/20 border border-purple-700/40 rounded-2xl p-5 hover:border-purple-500/60 transition-colors text-left"
+              className="flex items-center gap-4 bg-gray-800/40 border border-gray-700/60 rounded-2xl p-5 hover:border-gray-600 transition-colors text-left"
             >
-              <div className="p-3 bg-purple-500/20 rounded-xl">
-                <FileText className="w-6 h-6 text-purple-400" />
+              <div className="p-3 bg-gray-700/60 rounded-xl">
+                <FileText className="w-5 h-5 text-blue-400" />
               </div>
               <div>
-                <p className="font-semibold text-white">RCA Reports</p>
-                <p className="text-gray-400 text-sm">Root cause analysis for your fleet</p>
+                <p className="font-semibold text-white text-sm">RCA Reports</p>
+                <p className="text-gray-500 text-xs">Root cause analysis for your fleet</p>
               </div>
-              <ArrowRight className="w-4 h-4 text-gray-500 ml-auto shrink-0" />
+              <ArrowRight className="w-4 h-4 text-gray-600 ml-auto shrink-0" />
             </button>
           </div>
         </div>
@@ -282,14 +281,13 @@ export default function UserDashboard() {
           </section>
 
           {/* AI Recommendation */}
-          <section className={`rounded-2xl border p-5 ${highRisk
-            ? highRisk.status === 'critical'
-              ? 'bg-red-900/20 border-red-700/40'
-              : 'bg-yellow-900/20 border-yellow-700/40'
-            : 'bg-linear-to-br from-blue-900/30 to-cyan-900/20 border-blue-700/40'
+          <section className={`rounded-2xl border p-5 bg-gray-800/40 ${
+            highRisk?.status === 'critical' ? 'border-l-4 border-l-red-500 border-gray-700/60' :
+            highRisk?.status === 'warning' ? 'border-l-4 border-l-yellow-500 border-gray-700/60' :
+            'border-gray-700/60'
           }`}>
             <div className="flex items-center gap-2 mb-3">
-              <Bot className={`w-5 h-5 ${highRisk?.status === 'critical' ? 'text-red-400' : highRisk?.status === 'warning' ? 'text-yellow-400' : 'text-blue-400'}`} />
+              <Bot className={`w-4 h-4 ${highRisk?.status === 'critical' ? 'text-red-400' : highRisk?.status === 'warning' ? 'text-yellow-400' : 'text-blue-400'}`} />
               <h2 className="text-base font-semibold text-white">AI Recommendation</h2>
             </div>
 

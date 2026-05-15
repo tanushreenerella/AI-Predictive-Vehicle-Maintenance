@@ -20,11 +20,11 @@ interface VehicleCardProps {
 export default function VehicleCard({ vehicle }: VehicleCardProps) {
   const router = useRouter();
 
-  const getStatusColor = () => {
+  const getStatusBorderAccent = () => {
     switch (vehicle.status) {
-      case 'optimal': return 'border-green-500/50 bg-green-500/10';
-      case 'warning': return 'border-yellow-500/50 bg-yellow-500/10';
-      case 'critical': return 'border-red-500/50 bg-red-500/10';
+      case 'warning': return 'border-l-4 border-l-yellow-500';
+      case 'critical': return 'border-l-4 border-l-red-500';
+      default: return '';
     }
   };
 
@@ -55,7 +55,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
   const daysUntilService = getDaysUntilService();
 
   return (
-    <div className={`bg-gray-800/30 rounded-2xl p-5 border ${getStatusColor()} hover:border-blue-500/50 transition-all duration-300`}>
+    <div className={`bg-gray-800/40 rounded-2xl p-5 border border-gray-700/60 hover:border-gray-600 transition-colors ${getStatusBorderAccent()}`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -83,10 +83,10 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         </div>
         <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
           <div
-            className={`h-full ${
-              vehicle.health > 80 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
-              vehicle.health > 60 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
-              'bg-gradient-to-r from-red-500 to-pink-500'
+            className={`h-full rounded-full ${
+              vehicle.health > 80 ? 'bg-blue-500' :
+              vehicle.health > 60 ? 'bg-yellow-500' :
+              'bg-red-500'
             }`}
             style={{ width: `${vehicle.health}%` }}
           />
@@ -96,21 +96,21 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
       {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-blue-900/30 rounded-lg">
-            <Battery className="w-4 h-4 text-blue-400" />
+          <div className="p-1.5 bg-gray-700/60 rounded-lg">
+            <Battery className="w-4 h-4 text-gray-400" />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Fuel</p>
+            <p className="text-xs text-gray-500">Fuel</p>
             <p className="text-sm font-semibold text-white">{vehicle.fuelLevel}%</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-cyan-900/30 rounded-lg">
-            <Thermometer className="w-4 h-4 text-cyan-400" />
+          <div className="p-1.5 bg-gray-700/60 rounded-lg">
+            <Thermometer className="w-4 h-4 text-gray-400" />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Mileage</p>
+            <p className="text-xs text-gray-500">Mileage</p>
             <p className="text-sm font-semibold text-white">
               {vehicle.mileage.toLocaleString()} km
             </p>
@@ -118,11 +118,11 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-purple-900/30 rounded-lg">
-            <Zap className="w-4 h-4 text-purple-400" />
+          <div className="p-1.5 bg-gray-700/60 rounded-lg">
+            <Zap className="w-4 h-4 text-gray-400" />
           </div>
           <div>
-            <p className="text-xs text-gray-400">Last Service</p>
+            <p className="text-xs text-gray-500">Last Service</p>
             <p className="text-sm font-semibold text-white">
               {vehicle.lastService ? formatDate(vehicle.lastService) : '—'}
             </p>
@@ -132,12 +132,12 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         <div className="flex items-center gap-2">
           {daysUntilService !== null && (
             <>
-              <div className={`p-1.5 rounded-lg ${daysUntilService <= 7 ? 'bg-red-900/30' : 'bg-green-900/30'}`}>
-                <Calendar className={`w-4 h-4 ${daysUntilService <= 7 ? 'text-red-400' : 'text-green-400'}`} />
+              <div className="p-1.5 bg-gray-700/60 rounded-lg">
+                <Calendar className={`w-4 h-4 ${daysUntilService <= 7 ? 'text-red-400' : 'text-gray-400'}`} />
               </div>
               <div>
-                <p className="text-xs text-gray-400">Next Service</p>
-                <p className={`text-sm font-semibold ${daysUntilService <= 7 ? 'text-red-400' : 'text-green-400'}`}>
+                <p className="text-xs text-gray-500">Next Service</p>
+                <p className={`text-sm font-semibold ${daysUntilService <= 7 ? 'text-red-400' : 'text-white'}`}>
                   in {daysUntilService} days
                 </p>
               </div>
@@ -150,7 +150,7 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
       <div className="flex gap-2">
         <button
           onClick={() => router.push(`/dashboard/user/vehicles/${vehicle.id}`)}
-          className="flex-1 bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-2.5 rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/30 transition-all"
+          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl font-medium transition-colors"
         >
           View Details
         </button>
