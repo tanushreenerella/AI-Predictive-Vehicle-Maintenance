@@ -8,14 +8,15 @@ import { fetchWithAuth } from '@/lib/fetchWithAuth';
 const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
 type Vehicle = {
-  id: number;
+  id: number | string;
   name: string;
   model: string;
-  year: number;
-  registration_number: string;
+  year?: number;
+  registration_number?: string;
   ai_risk_level?: string | null;
-  health_score?: number | null;
-  last_analyzed?: string | null;
+  health?: number | null;
+  ai_failure_probability?: number | null;
+  ai_last_analyzed?: string | null;
 };
 
 function riskBadge(level?: string | null) {
@@ -41,7 +42,7 @@ export default function MyVehiclesPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchWithAuth(`${API_BASE}/vehicles/me`)
+    fetchWithAuth(`${API_BASE}/vehicles/health/me`)
       .then(r => r.ok ? r.json() : [])
       .then(setVehicles)
       .catch(() => {})
@@ -88,7 +89,12 @@ export default function MyVehiclesPage() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {vehicles.map(v => {
             const badge = riskBadge(v.ai_risk_level);
-            const health = v.health_score ?? null;
+            const prob = v.ai_failure_probability;
+            const health = typeof v.health === 'number'
+              ? v.health
+              : typeof prob === 'number'
+                ? Math.max(0, Math.round(100 - prob * 100))
+                : null;
 
             return (
               <div
@@ -104,7 +110,7 @@ export default function MyVehiclesPage() {
                     </div>
                     <div>
                       <h3 className="font-semibold text-white text-sm leading-tight">{v.name}</h3>
-                      <p className="text-gray-500 text-xs">{v.model} · {v.year}</p>
+                      <p className="text-gray-500 text-xs">{v.model}{v.year ? ` · ${v.year}` : ''}</p>
                     </div>
                   </div>
                   {badge ? (
@@ -132,14 +138,16 @@ export default function MyVehiclesPage() {
 
                 {/* Stats row */}
                 <div className="flex items-center gap-4 text-xs text-gray-500">
-                  <span className="flex items-center gap-1">
-                    <Gauge className="w-3 h-3" />
-                    {v.registration_number}
-                  </span>
-                  {v.last_analyzed ? (
+                  {v.registration_number && (
+                    <span className="flex items-center gap-1">
+                      <Gauge className="w-3 h-3" />
+                      {v.registration_number}
+                    </span>
+                  )}
+                  {v.ai_last_analyzed ? (
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
-                      {new Date(v.last_analyzed).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {new Date(v.ai_last_analyzed).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   ) : (
                     <span className="flex items-center gap-1 text-gray-600">

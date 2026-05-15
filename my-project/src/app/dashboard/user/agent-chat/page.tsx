@@ -48,6 +48,7 @@ type Message = {
   recommendation?: Recommendation | null;
   scheduling?: Scheduling | null;
   appointment?: Appointment | null;
+  tool_calls?: string[];
 };
 
 const PROMPTS = [
@@ -89,7 +90,7 @@ export default function AgentChatPage() {
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
   const [conversationState, setConversationState] = useState<ConversationState | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const isFirstRender = useRef(true);
 
   useEffect(() => {
@@ -107,7 +108,9 @@ export default function AgentChatPage() {
       isFirstRender.current = false;
       return;
     }
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
   }, [messages, loading]);
 
   async function sendMessageWithText(text: string) {
@@ -138,6 +141,7 @@ export default function AgentChatPage() {
           recommendation: data.recommendation ?? null,
           scheduling: data.scheduling ?? null,
           appointment: data.appointment ?? null,
+          tool_calls: Array.isArray(data.tool_calls) && data.tool_calls.length > 0 ? data.tool_calls : undefined,
         },
       ]);
     } catch {
@@ -200,7 +204,7 @@ export default function AgentChatPage() {
 
       {/* Chat area */}
       <div className="flex-1 bg-gray-900/60 border border-gray-700/60 rounded-2xl overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div ref={messagesRef} className="flex-1 overflow-y-auto p-4 space-y-4">
 
           {/* Welcome card — shown only on first visit */}
           {!hasConversation && (
@@ -250,6 +254,18 @@ export default function AgentChatPage() {
               >
                 {message.text}
               </div>
+
+              {message.role === 'agent' && message.tool_calls && message.tool_calls.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap max-w-[82%]">
+                  <span className="text-xs text-gray-600">Agents:</span>
+                  {message.tool_calls.map((tool, i) => (
+                    <span key={i} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-800/60 border border-gray-700/40 rounded-full text-gray-500">
+                      <span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               {message.recommendation && !message.appointment && (
                 <div className={`max-w-[82%] rounded-xl border p-4 space-y-2.5 text-sm ${urgencyColor(message.recommendation.urgency)}`}>
@@ -314,7 +330,6 @@ export default function AgentChatPage() {
               <TypingDots />
             </div>
           )}
-          <div ref={bottomRef} />
         </div>
 
         {/* Input area */}

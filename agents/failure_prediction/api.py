@@ -23,7 +23,7 @@ def root():
 # Prediction endpoint
 @app.post("/predict")
 def predict(data: SensorData):
-    prediction = predict_failure(data.dict())
+    prediction = predict_failure(data.model_dump())
     return prediction
 
 class ChatRequest(BaseModel):

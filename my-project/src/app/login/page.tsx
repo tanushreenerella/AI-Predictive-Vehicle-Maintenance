@@ -2,17 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Car, Eye, EyeOff, AlertCircle, User, Key } from 'lucide-react';
+import { Car, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    userType: 'user'
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -21,7 +17,6 @@ export default function LoginPage() {
     setLoading(true);
     setErrors([]);
 
-    // Validate form
     const newErrors = [];
     if (!formData.email) newErrors.push('Email is required');
     if (!formData.password) newErrors.push('Password is required');
@@ -33,13 +28,10 @@ export default function LoginPage() {
     }
 
     try {
-      const res = await fetch("https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
+      const res = await fetch('https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
       });
 
       if (!res.ok) {
@@ -50,13 +42,8 @@ export default function LoginPage() {
 
       const { access_token } = await res.json();
       localStorage.setItem('access_token', access_token);
-
-      if (formData.userType === 'admin') {
-        router.push('/dashboard/admin');
-      } else {
-        router.push('/dashboard/user');
-      }
-    } catch (error) {
+      router.push('/dashboard/user');
+    } catch {
       setErrors(['Login failed. Please try again.']);
     } finally {
       setLoading(false);
@@ -64,172 +51,77 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-900 via-blue-900/20 to-gray-900 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-6">
-          <div className="w-14 h-14 bg-linear-to-br from-blue-600 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/20">
-            <Car className="w-7 h-7 text-white" />
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Car className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-2xl font-bold bg-linear-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
-            ProactiveAI
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">Predictive Vehicle Maintenance System</p>
+          <h1 className="text-2xl font-bold text-white">Welcome back</h1>
+          <p className="text-gray-500 text-sm mt-1">Sign in to your ProactiveAI account</p>
         </div>
 
-        {/* Login Card */}
-        <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/60 rounded-2xl p-6 shadow-2xl">
-          <h2 className="text-xl font-bold text-white mb-4">Welcome Back</h2>
-          
+        {/* Card */}
+        <div className="bg-gray-800/40 border border-gray-700/60 rounded-2xl p-6">
           {errors.length > 0 && (
-            <div className="mb-6 p-4 bg-red-900/30 border border-red-700/50 rounded-lg">
-              <div className="flex items-center gap-2 text-red-400">
-                <AlertCircle className="w-5 h-5" />
-                <span className="font-semibold">Error</span>
+            <div className="mb-5 p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+              <div className="flex items-center gap-2 text-red-400 text-sm">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errors[0]}</span>
               </div>
-              <ul className="mt-2 text-sm text-red-300">
-                {errors.map((error, index) => (
-                  <li key={index}>• {error}</li>
-                ))}
-              </ul>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* User Type Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-300">Login As</label>
-              <div className="flex gap-4">
-                <label className="flex-1">
-                  <input
-                    type="radio"
-                    name="userType"
-                    value="user"
-                    checked={formData.userType === 'user'}
-                    onChange={(e) => setFormData({...formData, userType: e.target.value})}
-                    className="sr-only"
-                  />
-                  <div className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.userType === 'user' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-600'}`}>
-                    <div className="flex items-center gap-2.5">
-                      <User className={`w-4 h-4 ${formData.userType === 'user' ? 'text-blue-400' : 'text-gray-500'}`} />
-                      <div>
-                        <div className="font-semibold text-white text-sm">Vehicle Owner</div>
-                        <div className="text-xs text-gray-500">Monitor your vehicles</div>
-                      </div>
-                    </div>
-                  </div>
-                </label>
-                
-                <label className="flex-1">
-                  <input
-                    type="radio"
-                    name="userType"
-                    value="admin"
-                    checked={formData.userType === 'admin'}
-                    onChange={(e) => setFormData({...formData, userType: e.target.value})}
-                    className="sr-only"
-                  />
-                  <div className={`p-3 rounded-xl border-2 cursor-pointer transition-all ${formData.userType === 'admin' ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-600'}`}>
-                    <div className="flex items-center gap-2.5">
-                      <Key className={`w-4 h-4 ${formData.userType === 'admin' ? 'text-blue-400' : 'text-gray-500'}`} />
-                      <div>
-                        <div className="font-semibold text-white text-sm">Administrator</div>
-                        <div className="text-xs text-gray-500">System management</div>
-                      </div>
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            {/* Email */}
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-300">
-                Email Address
-              </label>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">Email</label>
               <input
-                id="email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                className="w-full px-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="owner@example.com"
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="you@example.com"
                 required
               />
             </div>
 
-            {/* Password */}
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-gray-300">
-                Password
-              </label>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1.5">Password</label>
               <div className="relative">
                 <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   value={formData.password}
-                  onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-gray-900/50 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-4 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="••••••••"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-400"
                 >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
             </div>
 
-            {/* Remember & Forgot */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded bg-gray-900 border-gray-700 text-blue-500 focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-400">Remember me</span>
-              </label>
-              <button
-                type="button"
-                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-              >
-                Forgot password?
-              </button>
-            </div>
-
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-linear-to-br from-blue-600 to-cyan-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg hover:shadow-blue-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Signing in…' : 'Sign In'}
             </button>
-
-            {/* Sign Up Link */}
-            <div className="text-center pt-4 border-t border-gray-800">
-              <p className="text-gray-400">
-                Don't have an account?{' '}
-                <Link href="/signup" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
-                  Sign up now
-                </Link>
-              </p>
-            </div>
           </form>
-        </div>
 
-        {/* Demo Credentials */}
-        <div className="mt-8 text-center">
-          <details className="text-sm text-gray-500">
-            <summary className="cursor-pointer hover:text-gray-400">Demo Credentials</summary>
-            <div className="mt-2 space-y-1 bg-gray-900/30 p-4 rounded-xl">
-              <p><strong>User:</strong> user@demo.com / demo123</p>
-              <p><strong>Admin:</strong> admin@demo.com / admin123</p>
-            </div>
-          </details>
+          <p className="text-center text-sm text-gray-500 mt-5 pt-5 border-t border-gray-700/60">
+            Don't have an account?{' '}
+            <Link href="/signup" className="text-blue-400 hover:text-blue-300 font-medium">
+              Sign up
+            </Link>
+          </p>
         </div>
       </div>
     </div>

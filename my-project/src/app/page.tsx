@@ -37,20 +37,6 @@ const pipeline = [
   { icon: Calendar, step: 4, title: 'Auto-book Service', desc: 'Appointment confirmed in the same conversation' },
 ];
 
-const roles = [
-  {
-    icon: Car,
-    title: 'Vehicle Owner',
-    desc: 'Add your vehicles, submit sensor readings, and let the AI assistant diagnose symptoms, recommend services, and book appointments.',
-    features: ['AI chat diagnosis', 'Failure probability scoring', 'Auto appointment booking', 'Health dashboard'],
-  },
-  {
-    icon: BarChart3,
-    title: 'Administrator',
-    desc: 'Manage the platform — view all users, vehicles, appointments, and system-wide alerts from a dedicated admin panel.',
-    features: ['User management', 'Fleet-wide alerts', 'Appointment oversight', 'System analytics'],
-  },
-];
 
 export default function LandingPage() {
   return (
@@ -90,7 +76,7 @@ export default function LandingPage() {
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-xs text-blue-400 font-medium mb-6">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-              LangGraph · XGBoost · FastAPI · Next.js
+             AI Diagnostics · Predictive Alerts · Smart Monitoring · Maintenance Forecasting · Risk Analysis · Vehicle Health
             </div>
 
             <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-[1.15] tracking-tight">
@@ -247,50 +233,6 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Who it's for */}
-      <section className="py-20 px-6 border-t border-gray-800/60">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl font-bold text-white">Two Roles, One Platform</h2>
-            <p className="text-gray-500 text-sm mt-2">Separate dashboards for vehicle owners and administrators</p>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            {roles.map(({ icon: Icon, title, desc, features }) => (
-              <div key={title} className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-                <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center mb-4">
-                  <Icon className="w-5 h-5 text-blue-400" />
-                </div>
-                <h3 className="text-base font-semibold text-white mb-2">{title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed mb-4">{desc}</p>
-                <ul className="space-y-1.5">
-                  {features.map(f => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-gray-400">
-                      <CheckCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Tech stack strip */}
-      <section className="py-10 border-t border-gray-800/60">
-        <div className="max-w-5xl mx-auto px-6">
-          <p className="text-center text-xs text-gray-600 mb-6 uppercase tracking-wider">Built with</p>
-          <div className="flex flex-wrap justify-center gap-3">
-            {['LangGraph', 'LangChain', 'XGBoost', 'FastAPI', 'Next.js 15', 'Tailwind CSS', 'PostgreSQL', 'Railway'].map(tech => (
-              <span key={tech} className="px-3 py-1.5 bg-gray-900 border border-gray-800 rounded-lg text-xs text-gray-400">
-                {tech}
-              </span>
             ))}
           </div>
         </div>

@@ -82,7 +82,7 @@ def train_model():
     y_train = y_train_res
     X_test_scaled = scaler.transform(X_test)
 
-    log.info("Training XGBoost model...")
+    log.info("Training LightGBM model...")
     model = LGBMClassifier(
     n_estimators=300,
     max_depth=6,

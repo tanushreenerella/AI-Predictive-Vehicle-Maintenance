@@ -1,14 +1,13 @@
 from __future__ import annotations
 import json
-import os
 import re
 from datetime import date, timedelta
 from typing import Any, Dict, List
 
-import requests
 from langchain_core.tools import tool
 
 from agents.llm import call_llm
+from agents.failure_prediction.predict import predict_failure
 
 
 @tool
@@ -38,12 +37,9 @@ If 2 or more answers are already collected, set enough_context to true and quest
 
 @tool
 def predict_engine_failure(sensor_data: Dict[str, Any]) -> Dict:
-    """Call the ML failure prediction API with sensor readings to get failure probability and risk level."""
-    url = os.getenv("FAILURE_AGENT_URL", "http://127.0.0.1:8000/predict")
+    """Run the ML failure prediction model directly with sensor readings to get failure probability and risk level."""
     try:
-        response = requests.post(url, json=sensor_data, timeout=10)
-        response.raise_for_status()
-        return response.json()
+        return predict_failure(sensor_data)
     except Exception as e:
         return {
             "error": str(e),
