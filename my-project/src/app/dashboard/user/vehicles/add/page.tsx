@@ -96,7 +96,7 @@ export default function AddVehiclePage() {
       </button>
 
       {/* Centered form */}
-      <div className="flex justify-center">
+     
         <div className="w-full max-w-md">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-white">Add Vehicle</h1>
@@ -145,7 +145,6 @@ export default function AddVehiclePage() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }
