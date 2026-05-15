@@ -104,9 +104,15 @@ const handleLogout = async () => {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3">
-        <ul className="space-y-2">
-          {items.map((item) => (
+        {!collapsed && <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 mb-2">Main</p>}
+        <ul className="space-y-1">
+          {items.map((item) => {
+            const isManagementStart = item.title === 'AI Analysis';
+            return (
             <li key={item.title}>
+              {!collapsed && isManagementStart && (
+                <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider px-3 pt-4 pb-2">Tools</p>
+              )}
               {item.subItems ? (
                 <div>
                   <button
@@ -148,7 +154,7 @@ const handleLogout = async () => {
                 <Link
                   href={item.href}
                   className={`flex items-center gap-3 p-3 rounded-xl transition-all relative ${
-                    pathname.startsWith(item.href)
+                    (item.href === '/dashboard/user' ? pathname === item.href : pathname.startsWith(item.href))
                       ? 'bg-blue-900/20 text-blue-400 border-l-[3px] border-blue-500 pl-2.25'
                       : 'text-gray-400 hover:bg-gray-800/50 hover:text-gray-200 border-l-[3px] border-transparent pl-2.25'
                   }`}
@@ -164,7 +170,8 @@ const handleLogout = async () => {
                 </Link>
               )}
             </li>
-          ))}
+            );
+          })}
         </ul>
       </nav>
 

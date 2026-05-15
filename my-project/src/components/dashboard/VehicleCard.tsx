@@ -1,6 +1,6 @@
 'use client';
 
-import { Car, AlertTriangle, CheckCircle, Battery, Thermometer, Zap, Settings, Calendar } from 'lucide-react';
+import { Car, AlertTriangle, CheckCircle, Battery, Thermometer, Zap, Calendar } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface VehicleCardProps {
@@ -55,7 +55,10 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
   const daysUntilService = getDaysUntilService();
 
   return (
-    <div className={`bg-gray-800/40 rounded-2xl p-5 border border-gray-700/60 hover:border-gray-600 transition-colors ${getStatusBorderAccent()}`}>
+    <div
+      onClick={() => router.push(`/dashboard/user/vehicles/${vehicle.id}`)}
+      className={`bg-gray-800/40 rounded-2xl p-5 border border-gray-700/60 hover:border-gray-600 transition-colors cursor-pointer ${getStatusBorderAccent()}`}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -69,9 +72,6 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
         </div>
         <div className="flex items-center gap-2">
           {getStatusIcon()}
-          <button className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-            <Settings className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
@@ -147,18 +147,18 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => router.push(`/dashboard/user/vehicles/${vehicle.id}`)}
-          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl font-medium transition-colors"
-        >
-          View Details
-        </button>
+      <div className="flex gap-2" onClick={e => e.stopPropagation()}>
         <button
           onClick={() => router.push(`/dashboard/user/analysis?vehicle_id=${vehicle.id}`)}
-          className="flex-1 py-2.5 bg-gray-700 text-white rounded-xl font-medium hover:bg-gray-600 transition-colors"
+          className="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-xl text-sm font-medium transition-colors"
         >
-          Run AI Analysis
+          Run Analysis
+        </button>
+        <button
+          onClick={() => router.push(`/dashboard/user/vehicles/${vehicle.id}`)}
+          className="flex-1 py-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 rounded-xl text-sm font-medium transition-colors"
+        >
+          Details
         </button>
       </div>
     </div>

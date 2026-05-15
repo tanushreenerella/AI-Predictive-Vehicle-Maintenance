@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bot, Calendar, Clock, Send, Wrench } from 'lucide-react';
+import { Bot, Calendar, Clock, Send, Wrench, Zap, Activity, Stethoscope, BookOpen, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
@@ -44,16 +44,44 @@ type ConversationState = Record<string, unknown>;
 type Message = {
   role: 'user' | 'agent';
   text: string;
+  ts: string;
   recommendation?: Recommendation | null;
   scheduling?: Scheduling | null;
   appointment?: Appointment | null;
 };
+
+const PROMPTS = [
+  { icon: Stethoscope, label: 'Engine noise', text: 'My engine is making a strange knocking noise' },
+  { icon: Zap, label: 'Battery issue', text: 'My battery is draining fast' },
+  { icon: Calendar, label: 'Book service', text: 'I want to book a service appointment' },
+  { icon: Activity, label: 'Vehicle health', text: 'Show me my vehicle health status' },
+  { icon: BookOpen, label: 'Next maintenance', text: 'When is my next maintenance due?' },
+];
+
+function now() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function TypingDots() {
+  return (
+    <div className="flex items-center gap-1 px-4 py-3 bg-gray-800 border border-gray-700/60 rounded-2xl rounded-tl-sm w-fit">
+      {[0, 1, 2].map(i => (
+        <span
+          key={i}
+          className="w-1.5 h-1.5 rounded-full bg-gray-400"
+          style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function AgentChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'agent',
       text: "Hi! I'm your AI vehicle assistant. Tell me a symptom and I'll diagnose it step by step, or say you want to book service.",
+      ts: now(),
     },
   ]);
   const [input, setInput] = useState('');
@@ -77,11 +105,10 @@ export default function AgentChatPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
-  async function sendMessage() {
-    const text = input.trim();
-    if (!text || loading) return;
+  async function sendMessageWithText(text: string) {
+    if (!text.trim() || loading) return;
 
-    setMessages((prev) => [...prev, { role: 'user', text }]);
+    setMessages((prev) => [...prev, { role: 'user', text, ts: now() }]);
     setInput('');
     setLoading(true);
 
@@ -102,6 +129,7 @@ export default function AgentChatPage() {
         {
           role: 'agent',
           text: data.reply,
+          ts: now(),
           recommendation: data.recommendation ?? null,
           scheduling: data.scheduling ?? null,
           appointment: data.appointment ?? null,
@@ -110,140 +138,208 @@ export default function AgentChatPage() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: 'agent', text: 'Sorry, I could not connect to the AI service. Please try again.' },
+        { role: 'agent', text: 'Sorry, I could not connect to the AI service. Please try again.', ts: now() },
       ]);
     } finally {
       setLoading(false);
     }
   }
 
+  function sendMessage() {
+    sendMessageWithText(input.trim());
+  }
+
   const urgencyColor = (urgency?: string) =>
     urgency === 'HIGH'
-      ? 'border-red-500/50 bg-red-500/10 text-red-300'
+      ? 'border-red-500/40 bg-red-500/5 text-red-300'
       : urgency === 'MEDIUM'
-        ? 'border-yellow-500/50 bg-yellow-500/10 text-yellow-200'
-        : 'border-green-500/50 bg-green-500/10 text-green-200';
+        ? 'border-yellow-500/40 bg-yellow-500/5 text-yellow-200'
+        : 'border-green-500/40 bg-green-500/5 text-green-200';
+
+  const hasConversation = messages.length > 1;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      <div className="flex items-center gap-3">
-        <Bot className="w-7 h-7 text-blue-400" />
-        <div>
-          <h1 className="text-2xl font-bold text-white">AI Assistant</h1>
-          <p className="text-gray-400 text-sm">Diagnosis, recommendations, and booking in one chat</p>
-        </div>
-      </div>
-
-      {vehicles.length > 0 && (
+    <div className="max-w-3xl mx-auto flex flex-col h-[calc(100vh-120px)] gap-0">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-4">
         <div className="flex items-center gap-3">
-          <label className="text-sm text-gray-400 whitespace-nowrap">Active vehicle:</label>
-          <select
-            value={selectedVehicleId}
-            onChange={(e) => {
-              setSelectedVehicleId(e.target.value);
-              setConversationState(null);
-            }}
-            className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {vehicles.map((v) => (
-              <option key={v.id} value={String(v.id)}>
-                {v.name} {v.ai_risk_level ? `- ${v.ai_risk_level} risk` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 h-[420px] overflow-y-auto space-y-3">
-        {messages.map((message, index) => (
-          <div key={index} className={`flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-            <div
-              className={`p-3 rounded-lg max-w-[85%] text-sm leading-relaxed ${
-                message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-100'
-              }`}
-            >
-              {message.text}
-            </div>
-
-            {message.recommendation && !message.appointment && (
-              <div className={`max-w-[85%] rounded-lg border p-4 space-y-3 text-sm ${urgencyColor(message.recommendation.urgency)}`}>
-                <div className="flex items-center gap-2 font-semibold">
-                  <Wrench className="w-4 h-4" />
-                  Service Recommendation
-                </div>
-                <div className="grid gap-2 text-gray-200">
-                  <p><span className="text-gray-400">Likely issue:</span> {message.recommendation.likely_issue}</p>
-                  <p><span className="text-gray-400">Service:</span> {message.recommendation.recommended_service}</p>
-                  <p><span className="text-gray-400">Urgency:</span> <span className="font-semibold">{message.recommendation.urgency}</span></p>
-                  <p><span className="text-gray-400">Estimated cost:</span> {message.recommendation.estimated_cost}</p>
-                  <p><span className="text-gray-400">Timeframe:</span> {message.recommendation.timeframe}</p>
-                </div>
-              </div>
-            )}
-
-            {message.scheduling && !message.appointment && (
-              <div className="max-w-[85%] rounded-lg border border-blue-500/40 bg-blue-500/10 p-4 space-y-3 text-sm text-blue-100">
-                <div className="flex items-center gap-2 font-semibold">
-                  <Clock className="w-4 h-4" />
-                  Suggested Appointment
-                </div>
-                <div className="space-y-1 text-gray-200">
-                  <p><span className="text-gray-400">Service:</span> {message.scheduling.service_type}</p>
-                  <p><span className="text-gray-400">Priority:</span> {message.scheduling.recommended_urgency}</p>
-                  {message.scheduling.selected_slot && (
-                    <p><span className="text-gray-400">Slot:</span> {message.scheduling.selected_slot.date} at {message.scheduling.selected_slot.time}</p>
-                  )}
-                  <p className="text-gray-400">{message.scheduling.reason}</p>
-                </div>
-              </div>
-            )}
-
-            {message.appointment && (
-              <div className={`max-w-[85%] rounded-lg border p-4 space-y-2 text-sm ${urgencyColor(message.appointment.urgency)}`}>
-                <div className="flex items-center gap-2 font-semibold">
-                  <Calendar className="w-4 h-4" />
-                  Appointment Confirmed
-                </div>
-                <div className="space-y-1 text-gray-200">
-                  <p><span className="text-gray-400">Vehicle:</span> {message.appointment.vehicle}</p>
-                  <p><span className="text-gray-400">Service:</span> {message.appointment.service_type}</p>
-                  <p><span className="text-gray-400">Date:</span> {message.appointment.date} at {message.appointment.time}</p>
-                  <p><span className="text-gray-400">Urgency:</span> <span className="font-semibold">{message.appointment.urgency}</span></p>
-                </div>
-                <Link href="/dashboard/user/appointments" className="inline-block mt-1 text-blue-300 underline text-xs">
-                  View in appointments
-                </Link>
-              </div>
-            )}
+          <div className="p-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+            <Bot className="w-5 h-5 text-blue-400" />
           </div>
-        ))}
+          <div>
+            <h1 className="text-lg font-semibold text-white">AI Assistant</h1>
+            <p className="text-gray-500 text-xs">Diagnosis, recommendations & booking</p>
+          </div>
+        </div>
 
-        {loading && (
-          <div className="flex items-center gap-2 text-gray-400 text-sm">
-            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-            AI is thinking...
+        {vehicles.length > 0 && (
+          <div className="relative">
+            <select
+              value={selectedVehicleId}
+              onChange={(e) => {
+                setSelectedVehicleId(e.target.value);
+                setConversationState(null);
+              }}
+              className="appearance-none bg-gray-800/60 border border-gray-700/60 rounded-xl px-4 py-2 pr-8 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+            >
+              {vehicles.map((v) => (
+                <option key={v.id} value={String(v.id)}>
+                  {v.name}{v.ai_risk_level ? ` · ${v.ai_risk_level} risk` : ''}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Ask about a symptom, answer a question, or confirm a booking..."
-          className="flex-1 bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={sendMessage}
-          disabled={loading || !input.trim()}
-          className="px-5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white transition-colors"
-          aria-label="Send message"
-        >
-          <Send className="w-5 h-5" />
-        </button>
+      {/* Chat area */}
+      <div className="flex-1 bg-gray-900/60 border border-gray-700/60 rounded-2xl overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+
+          {/* Welcome card — shown only on first visit */}
+          {!hasConversation && (
+            <div className="bg-gray-800/60 border border-gray-700/40 rounded-2xl p-5 mb-2">
+              <div className="flex items-center gap-2 mb-1">
+                <Bot className="w-4 h-4 text-blue-400" />
+                <span className="text-white font-medium text-sm">AI Vehicle Assistant</span>
+                <span className="text-xs text-gray-500 ml-auto">{messages[0].ts}</span>
+              </div>
+              <p className="text-gray-300 text-sm leading-relaxed">{messages[0].text}</p>
+            </div>
+          )}
+
+          {/* Suggested prompts — shown only before conversation starts */}
+          {!hasConversation && (
+            <div>
+              <p className="text-xs text-gray-600 mb-2 px-1">Try asking...</p>
+              <div className="flex flex-wrap gap-2">
+                {PROMPTS.map(({ icon: Icon, label, text }) => (
+                  <button
+                    key={label}
+                    onClick={() => sendMessageWithText(text)}
+                    className="flex items-center gap-2 px-3 py-2 bg-gray-800/60 border border-gray-700/60 hover:border-gray-600 hover:bg-gray-800 rounded-xl text-sm text-gray-300 transition-colors"
+                  >
+                    <Icon className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Messages (skip index 0 if not hasConversation since we show welcome card) */}
+          {(hasConversation ? messages : messages.slice(1)).map((message, index) => (
+            <div key={index} className={`flex flex-col gap-2 ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+              <div className="flex items-center gap-1.5 mb-0.5">
+                {message.role === 'agent' && <Bot className="w-3 h-3 text-blue-400" />}
+                <span className="text-xs text-gray-600">{message.ts}</span>
+              </div>
+
+              <div
+                className={`px-4 py-3 rounded-2xl max-w-[82%] text-sm leading-relaxed ${
+                  message.role === 'user'
+                    ? 'bg-blue-600 text-white rounded-tr-sm'
+                    : 'bg-gray-800 border border-gray-700/60 text-gray-100 rounded-tl-sm'
+                }`}
+              >
+                {message.text}
+              </div>
+
+              {message.recommendation && !message.appointment && (
+                <div className={`max-w-[82%] rounded-xl border p-4 space-y-2.5 text-sm ${urgencyColor(message.recommendation.urgency)}`}>
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Wrench className="w-4 h-4" />
+                    Service Recommendation
+                    <span className="ml-auto text-xs font-normal px-2 py-0.5 rounded-full bg-black/20 border border-current/20">
+                      {message.recommendation.urgency}
+                    </span>
+                  </div>
+                  <div className="grid gap-1.5 text-sm">
+                    <p><span className="text-gray-400">Issue:</span> {message.recommendation.likely_issue}</p>
+                    <p><span className="text-gray-400">Service:</span> {message.recommendation.recommended_service}</p>
+                    <p><span className="text-gray-400">Cost:</span> {message.recommendation.estimated_cost}</p>
+                    <p><span className="text-gray-400">Timeframe:</span> {message.recommendation.timeframe}</p>
+                  </div>
+                </div>
+              )}
+
+              {message.scheduling && !message.appointment && (
+                <div className="max-w-[82%] rounded-xl border border-blue-500/30 bg-blue-500/5 p-4 space-y-2 text-sm text-blue-100">
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Clock className="w-4 h-4" />
+                    Suggested Appointment
+                  </div>
+                  <div className="space-y-1 text-gray-300">
+                    <p><span className="text-gray-500">Service:</span> {message.scheduling.service_type}</p>
+                    <p><span className="text-gray-500">Priority:</span> {message.scheduling.recommended_urgency}</p>
+                    {message.scheduling.selected_slot && (
+                      <p><span className="text-gray-500">Slot:</span> {message.scheduling.selected_slot.date} at {message.scheduling.selected_slot.time}</p>
+                    )}
+                    <p className="text-gray-500 text-xs">{message.scheduling.reason}</p>
+                  </div>
+                </div>
+              )}
+
+              {message.appointment && (
+                <div className={`max-w-[82%] rounded-xl border p-4 space-y-2 text-sm ${urgencyColor(message.appointment.urgency)}`}>
+                  <div className="flex items-center gap-2 font-semibold">
+                    <Calendar className="w-4 h-4" />
+                    Appointment Confirmed
+                  </div>
+                  <div className="space-y-1 text-gray-300">
+                    <p><span className="text-gray-400">Vehicle:</span> {message.appointment.vehicle}</p>
+                    <p><span className="text-gray-400">Service:</span> {message.appointment.service_type}</p>
+                    <p><span className="text-gray-400">Date:</span> {message.appointment.date} at {message.appointment.time}</p>
+                  </div>
+                  <Link href="/dashboard/user/appointments" className="inline-flex items-center gap-1 mt-1 text-blue-300 hover:text-blue-200 text-xs underline">
+                    View in appointments
+                  </Link>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {loading && (
+            <div className="flex flex-col items-start gap-1">
+              <div className="flex items-center gap-1.5 mb-0.5">
+                <Bot className="w-3 h-3 text-blue-400" />
+                <span className="text-xs text-gray-600">thinking...</span>
+              </div>
+              <TypingDots />
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        {/* Input area */}
+        <div className="border-t border-gray-700/60 p-3">
+          <div className="flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+              placeholder="Ask about a symptom, answer a question, or confirm a booking..."
+              className="flex-1 bg-gray-800/60 border border-gray-700/60 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition"
+            />
+            <button
+              onClick={sendMessage}
+              disabled={loading || !input.trim()}
+              className="p-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-white transition-colors"
+              aria-label="Send message"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+          30% { transform: translateY(-4px); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

@@ -17,21 +17,20 @@ const menuItems: MenuItem[] = [
     href: '/dashboard/user/vehicles',
     icon: 'Car',
     subItems: [
-      {
-        title: 'Add Vehicle',
-        href: '/dashboard/user/vehicles/add',
-      },
-    ]},
-    {
-  title: "Schedule",
-  href: "/dashboard/user/schedule",
-  icon: "Calendar",
-},
-{
-  title: 'Appointments',
-  href: '/dashboard/user/appointments',
-  icon: 'Calendar',
-},{
+      { title: 'Add Vehicle', href: '/dashboard/user/vehicles/add' },
+    ],
+  },
+  {
+    title: 'Schedule',
+    href: '/dashboard/user/schedule',
+    icon: 'Calendar',
+  },
+  {
+    title: 'Appointments',
+    href: '/dashboard/user/appointments',
+    icon: 'Bell',
+  },
+  {
     title: 'AI Analysis',
     href: '/dashboard/user/analysis',
     icon: 'TrendingUp',

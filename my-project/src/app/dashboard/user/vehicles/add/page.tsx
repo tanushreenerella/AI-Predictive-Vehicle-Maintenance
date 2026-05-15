@@ -85,7 +85,7 @@ export default function AddVehiclePage() {
   ] as const;
 
   return (
-    <div className="px-6 pt-4">
+    <div className="px-6 pt-1">
       {/* Back button */}
       <button
         onClick={() => router.back()}
