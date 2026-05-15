@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -44,15 +44,17 @@ const [newTime, setNewTime] = useState('');
       .finally(() => setLoading(false));
   }, [router]);
 
-  const urgencyBadge = (u: string) =>
-    u === ‘HIGH’ ? ‘bg-red-500/10 text-red-400 border-red-500/20’
-    : u === ‘MEDIUM’ ? ‘bg-yellow-500/10 text-yellow-400 border-yellow-500/20’
-    : ‘bg-green-500/10 text-green-400 border-green-500/20’;
+  const urgencyBadge = (u: string) => {
+    if (u === 'HIGH') return 'bg-red-500/10 text-red-400 border-red-500/20';
+    if (u === 'MEDIUM') return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+    return 'bg-green-500/10 text-green-400 border-green-500/20';
+  };
 
-  const warningBg = (level: string) =>
-    level === ‘HIGH’ ? ‘bg-red-500/5 border-red-500/20 text-red-300’
-    : level === ‘MEDIUM’ ? ‘bg-yellow-500/5 border-yellow-500/20 text-yellow-300’
-    : ‘bg-gray-800/40 border-gray-700 text-gray-400’;
+  const warningBg = (level: string) => {
+    if (level === 'HIGH') return 'bg-red-500/5 border-red-500/20 text-red-300';
+    if (level === 'MEDIUM') return 'bg-yellow-500/5 border-yellow-500/20 text-yellow-300';
+    return 'bg-gray-800/40 border-gray-700 text-gray-400';
+  };
 
   return (
     <div className="space-y-6">
@@ -77,7 +79,7 @@ const [newTime, setNewTime] = useState('');
             <div className="flex items-start justify-between gap-2">
               <p className="text-white font-semibold text-base leading-snug">{appt.service_type}</p>
               <div className="flex gap-1.5 shrink-0">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${appt.status === ‘COMPLETED’ ? ‘bg-gray-700/40 text-gray-400 border-gray-600/40’ : ‘bg-blue-500/10 text-blue-400 border-blue-500/20’}`}>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${appt.status === 'COMPLETED' ? 'bg-gray-700/40 text-gray-400 border-gray-600/40' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>
                   {appt.status}
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium border ${urgencyBadge(appt.urgency)}`}>
@@ -100,7 +102,7 @@ const [newTime, setNewTime] = useState('');
                     <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                     <p>{appt.ai_warning.message}</p>
                   </div>
-                  {appt.ai_warning.level === ‘HIGH’ && appt.status !== ‘COMPLETED’ && (
+                  {appt.ai_warning.level === 'HIGH' && appt.status !== 'COMPLETED' && (
                     <button onClick={() => { setEditingId(appt.id); setNewDate(appt.appointment_date); setNewTime(appt.appointment_time); }} className="text-xs underline shrink-0 opacity-70 hover:opacity-100">
                       Reschedule
                     </button>
@@ -127,7 +129,7 @@ const [newTime, setNewTime] = useState('');
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={async () => {
-                      await fetchWithAuth(`${API_BASE}/schedule/${appt.id}`, { method: ‘PATCH’, body: JSON.stringify({ appointment_date: newDate, appointment_time: newTime }) });
+                      await fetchWithAuth(`${API_BASE}/schedule/${appt.id}`, { method: 'PATCH', body: JSON.stringify({ appointment_date: newDate, appointment_time: newTime }) });
                       setAppointments(prev => prev.map(a => a.id === appt.id ? { ...a, appointment_date: newDate, appointment_time: newTime } : a));
                       setEditingId(null);
                     }}
@@ -144,7 +146,7 @@ const [newTime, setNewTime] = useState('');
               <div className="flex items-center justify-between">
                 <div className="flex gap-3">
                   <button
-                    disabled={appt.ai_warning?.level === ‘HIGH’}
+                    disabled={appt.ai_warning?.level === 'HIGH'}
                     onClick={() => { setEditingId(appt.id); setNewDate(appt.appointment_date); setNewTime(appt.appointment_time); }}
                     className="text-sm text-gray-400 hover:text-gray-200 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
                   >
@@ -152,8 +154,8 @@ const [newTime, setNewTime] = useState('');
                   </button>
                   <button
                     onClick={async () => {
-                      if (!confirm(‘Cancel this appointment?’)) return;
-                      await fetchWithAuth(`${API_BASE}/schedule/${appt.id}`, { method: ‘DELETE’ });
+                      if (!confirm('Cancel this appointment?')) return;
+                      await fetchWithAuth(`${API_BASE}/schedule/${appt.id}`, { method: 'DELETE' });
                       setAppointments(prev => prev.filter(a => a.id !== appt.id));
                     }}
                     className="text-sm text-red-400/70 hover:text-red-400 transition-colors"
