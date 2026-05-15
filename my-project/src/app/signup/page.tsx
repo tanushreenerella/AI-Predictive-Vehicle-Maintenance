@@ -143,7 +143,7 @@ export default function SignupPage() {
 
               {/* Vehicle Number */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1.5">Vehicle Registration <span className="text-gray-600">(optional)</span></label>
+                <label className="block text-sm text-gray-400 mb-1.5">Vehicle Registration </label>
                 <div className="relative">
                   <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                   <input
