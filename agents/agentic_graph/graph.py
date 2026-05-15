@@ -28,6 +28,7 @@ def supervisor_node(state: VehicleAgentState) -> Dict[str, Any]:
     answers_count = len(state.get("diagnostic_answers", []))
     has_recommendation = bool(state.get("recommendation"))
     has_sensor = bool(state.get("sensor_data"))
+    has_scheduling = bool(state.get("scheduling"))
     has_risk = bool(state.get("risk_level"))
 
     prompt = f"""You are a vehicle service supervisor. Decide which specialist to route to.
@@ -39,15 +40,17 @@ Current state:
 - Sensor data available: {has_sensor}
 - ML risk analyzed: {has_risk}
 - Has service recommendation: {has_recommendation}
+- Scheduling already done: {has_scheduling}
 
 Routing rules:
 - "diagnostic"      -> user describes a vehicle symptom or complaint
 - "sensor_ml"       -> sensor data is present but not yet analyzed
 - "recommendation"  -> diagnosis is done (answers >= 2)
-- "scheduling"      -> user wants to book or schedule an appointment
-- "end"             -> task is fully complete, nothing more to do
+- "scheduling"      -> user wants to book AND scheduling not yet done
+- "end"             -> scheduling already done, user is acknowledging, or task is complete
 
 Reply with ONLY one word."""
+
 
     decision = call_llm(prompt).strip().lower().split()[0]
     valid = {"diagnostic", "sensor_ml", "recommendation", "scheduling", "end"}

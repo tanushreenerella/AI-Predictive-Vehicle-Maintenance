@@ -165,7 +165,7 @@ export default function AgentChatPage() {
               {message.text}
             </div>
 
-            {message.recommendation && (
+            {message.recommendation && !message.appointment && (
               <div className={`max-w-[85%] rounded-lg border p-4 space-y-3 text-sm ${urgencyColor(message.recommendation.urgency)}`}>
                 <div className="flex items-center gap-2 font-semibold">
                   <Wrench className="w-4 h-4" />
