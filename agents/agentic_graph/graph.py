@@ -43,12 +43,12 @@ Current state:
 - Has service recommendation: {has_recommendation}
 - Scheduling already done: {has_scheduling}
 
-Routing rules:
-- "diagnostic"      -> user describes a symptom AND answers_count < {MAX_DIAGNOSTIC_QUESTIONS}
+Routing rules (follow strictly based on phase):
+- "diagnostic"      -> phase is "general" or "diagnosing" AND answers_count < {MAX_DIAGNOSTIC_QUESTIONS}
 - "sensor_ml"       -> sensor data is present but not yet analyzed
-- "recommendation"  -> answers_count >= {MAX_DIAGNOSTIC_QUESTIONS}, OR phase is "recommended"
-- "scheduling"      -> user wants to book AND scheduling not yet done
-- "end"             -> scheduling already done, user is acknowledging, or task is complete
+- "recommendation"  -> phase is "recommended" (diagnosis just completed, need recommendation)
+- "scheduling"      -> phase is "awaiting_booking" (recommendation already shown, user wants to proceed)
+- "end"             -> phase is "scheduling" or "confirmed", OR task is complete
 
 Reply with ONLY one word."""
 
@@ -152,7 +152,7 @@ def recommendation_node(state: VehicleAgentState) -> Dict[str, Any]:
     return {
         "messages": [AIMessage(content=reply)],
         "recommendation": tool_result,
-        "phase": "recommended",
+        "phase": "awaiting_booking",
         "next_agent": "supervisor",
     }
 

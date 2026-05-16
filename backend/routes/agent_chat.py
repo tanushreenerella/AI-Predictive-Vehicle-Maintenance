@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage, HumanMessage
 from sqlalchemy.orm import Session
 
 from agents.agentic_graph.graph import vehicle_graph
+from agents.agentic_graph.tools import find_appointment_slots
 from agents.agentic_scheduling_agent import agentic_scheduling_agent
 from backend.auth.dependencies import get_current_user
 from backend.models.appointment import Appointment
@@ -113,6 +114,28 @@ def chat(
     vehicle = _resolve_vehicle(db, user, payload.get("vehicle_id"))
     state_key = _state_key(user.id, vehicle.id if vehicle else "none", payload.get("session_id"))
     state = payload.get("state") or _CONVERSATIONS.get(state_key) or _fresh_state(_vehicle_label(vehicle))
+
+    # Scheduling intent — user said yes to a recommendation, find a slot
+    if _is_scheduling_intent(message, state):
+        slots = find_appointment_slots.invoke({
+            "urgency": (state.get("recommendation") or {}).get("urgency", "MEDIUM"),
+            "user_preference": message,
+        })
+        slot = slots.get("selected_slot", {})
+        reply = f"I found a slot on {slot.get('date', 'TBD')} at {slot.get('time', '10:00')}. Reply 'confirm' to book it."
+        state["scheduling"] = slots
+        state["phase"] = "scheduling"
+        _CONVERSATIONS[state_key] = state
+        return {
+            "reply": reply,
+            "step": "scheduling",
+            "phase": "scheduling",
+            "state": state,
+            "recommendation": state.get("recommendation"),
+            "scheduling": slots,
+            "appointment": None,
+            "tool_calls": ["supervisor", "find_appointment_slots"],
+        }
 
     # Booking confirmation is handled outside the graph (requires DB access)
     if _is_booking_confirmation(message, state):
@@ -239,6 +262,16 @@ def _vehicle_label(vehicle: Optional[Vehicle]) -> str:
 
 def _state_key(user_id: str, vehicle_id: str, session_id: Optional[str]) -> str:
     return f"{user_id}:{vehicle_id}:{session_id or 'default'}"
+
+
+def _is_scheduling_intent(message: str, state: Dict[str, Any]) -> bool:
+    msg = (message or "").lower()
+    return (
+        state.get("recommendation") is not None
+        and state.get("scheduling") is None
+        and state.get("phase") in ("awaiting_booking", "recommended")
+        and any(w in msg for w in ["yes", "ok", "okay", "sure", "book", "schedule", "please", "go ahead", "yep", "yeah"])
+    )
 
 
 def _is_booking_confirmation(message: str, state: Dict[str, Any]) -> bool:
