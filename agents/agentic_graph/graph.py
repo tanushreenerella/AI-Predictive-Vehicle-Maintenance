@@ -9,6 +9,7 @@ from langgraph.graph import END, START, StateGraph
 
 from agents.agentic_graph.state import VehicleAgentState
 from agents.agentic_graph.tools import (
+    MAX_DIAGNOSTIC_QUESTIONS,
     find_appointment_slots,
     generate_service_recommendation,
     get_diagnostic_question,
@@ -36,16 +37,16 @@ def supervisor_node(state: VehicleAgentState) -> Dict[str, Any]:
 Current state:
 - Phase: {phase}
 - Last user message: {last_msg}
-- Diagnostic answers collected: {answers_count}
+- Diagnostic answers collected: {answers_count} (max allowed: {MAX_DIAGNOSTIC_QUESTIONS})
 - Sensor data available: {has_sensor}
 - ML risk analyzed: {has_risk}
 - Has service recommendation: {has_recommendation}
 - Scheduling already done: {has_scheduling}
 
 Routing rules:
-- "diagnostic"      -> user describes a vehicle symptom or complaint
+- "diagnostic"      -> user describes a symptom AND answers_count < {MAX_DIAGNOSTIC_QUESTIONS}
 - "sensor_ml"       -> sensor data is present but not yet analyzed
-- "recommendation"  -> diagnosis is done (answers >= 2)
+- "recommendation"  -> answers_count >= {MAX_DIAGNOSTIC_QUESTIONS}, OR phase is "recommended"
 - "scheduling"      -> user wants to book AND scheduling not yet done
 - "end"             -> scheduling already done, user is acknowledging, or task is complete
 
@@ -69,6 +70,20 @@ def diagnostic_node(state: VehicleAgentState) -> Dict[str, Any]:
         last_msg = messages[-1]
         if isinstance(last_msg, HumanMessage):
             answers.append({"answer": last_msg.content})
+
+    # Hard limit — force move to recommendation once max answers reached
+    if len(answers) >= MAX_DIAGNOSTIC_QUESTIONS:
+        return {
+            "messages": [],
+            "symptom": symptom,
+            "diagnostic_answers": answers,
+            "issue_context": {
+                "symptom": symptom,
+                "answers": answers,
+                "summary": f"{symptom}. " + "; ".join([a.get("answer", "") for a in answers]),
+            },
+            "phase": "recommended",
+        }
 
     tool_result = get_diagnostic_question.invoke({
         "symptom": symptom,

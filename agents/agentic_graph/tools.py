@@ -10,18 +10,21 @@ from agents.llm import call_llm
 from agents.failure_prediction.predict import predict_failure
 
 
+MAX_DIAGNOSTIC_QUESTIONS = 3
+
 @tool
 def get_diagnostic_question(symptom: str, answers_so_far: List[Dict]) -> Dict:
     """Generate the next diagnostic question based on symptom and answers collected so far."""
-    prompt = f"""You are a vehicle diagnostic expert.
+    # Hard limit — never ask more than MAX_DIAGNOSTIC_QUESTIONS
+    if len(answers_so_far) >= MAX_DIAGNOSTIC_QUESTIONS:
+        return {"question": "", "enough_context": True}
+
+    n = len(answers_so_far)
+    prompt = f"""You are a vehicle diagnostic expert. Ask ONE short follow-up question.
 Symptom: {symptom}
-Answers collected so far: {json.dumps(answers_so_far)}
+Answers so far ({n} of {MAX_DIAGNOSTIC_QUESTIONS}): {json.dumps(answers_so_far)}
 
-Generate ONE follow-up question to better understand the issue.
-Return ONLY valid JSON:
-{{"question": "your question here", "enough_context": false}}
-
-If 2 or more answers are already collected, set enough_context to true and question to ""."""
+Return ONLY valid JSON: {{"question": "your question here", "enough_context": false}}"""
 
     try:
         raw = call_llm(prompt)
