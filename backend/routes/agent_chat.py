@@ -2,10 +2,11 @@ from datetime import date, time
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
+from langchain_core.messages import AIMessage, HumanMessage
 from sqlalchemy.orm import Session
 
+from agents.agentic_graph.graph import vehicle_graph
 from agents.agentic_scheduling_agent import agentic_scheduling_agent
-from agents.conversation_orchestrator import fresh_state, route_chat_turn
 from backend.auth.dependencies import get_current_user
 from backend.models.appointment import Appointment
 from backend.models.user import User
@@ -15,6 +16,90 @@ from backend.session import get_db
 router = APIRouter(tags=["Agent Chat"])
 
 _CONVERSATIONS: Dict[str, Dict[str, Any]] = {}
+
+
+def _fresh_state(vehicle_label: str) -> Dict[str, Any]:
+    return {
+        "messages": [],
+        "phase": "general",
+        "symptom": None,
+        "sensor_data": None,
+        "diagnostic_answers": [],
+        "issue_context": None,
+        "recommendation": None,
+        "scheduling": None,
+        "vehicle_label": vehicle_label,
+        "failure_probability": None,
+        "risk_level": None,
+        "next_agent": "",
+    }
+
+
+def _to_graph_input(state: Dict[str, Any], message: str, vehicle_label: str) -> Dict[str, Any]:
+    messages = []
+    for m in state.get("messages", []):
+        if isinstance(m, dict):
+            if m.get("type") == "human":
+                messages.append(HumanMessage(content=m["content"]))
+            elif m.get("type") == "ai":
+                messages.append(AIMessage(content=m["content"]))
+        elif isinstance(m, (HumanMessage, AIMessage)):
+            messages.append(m)
+    messages.append(HumanMessage(content=message))
+
+    return {
+        "messages": messages,
+        "phase": state.get("phase", "general"),
+        "symptom": state.get("symptom"),
+        "sensor_data": state.get("sensor_data"),
+        "diagnostic_answers": state.get("diagnostic_answers", []),
+        "issue_context": state.get("issue_context"),
+        "recommendation": state.get("recommendation"),
+        "scheduling": state.get("scheduling"),
+        "vehicle_label": vehicle_label,
+        "failure_probability": state.get("failure_probability"),
+        "risk_level": state.get("risk_level"),
+        "next_agent": state.get("next_agent", ""),
+    }
+
+
+def _serialize_state(result: Dict[str, Any]) -> Dict[str, Any]:
+    messages = []
+    for m in result.get("messages", []):
+        if isinstance(m, HumanMessage):
+            messages.append({"type": "human", "content": m.content})
+        elif isinstance(m, AIMessage):
+            messages.append({"type": "ai", "content": m.content})
+        elif isinstance(m, dict):
+            messages.append(m)
+    return {
+        "messages": messages,
+        "phase": result.get("phase", "general"),
+        "symptom": result.get("symptom"),
+        "sensor_data": result.get("sensor_data"),
+        "diagnostic_answers": result.get("diagnostic_answers", []),
+        "issue_context": result.get("issue_context"),
+        "recommendation": result.get("recommendation"),
+        "scheduling": result.get("scheduling"),
+        "vehicle_label": result.get("vehicle_label", ""),
+        "failure_probability": result.get("failure_probability"),
+        "risk_level": result.get("risk_level"),
+        "next_agent": result.get("next_agent", ""),
+    }
+
+
+def _infer_tool_calls(prev_state: Dict[str, Any], result: Dict[str, Any]) -> list:
+    """Determine which agents ran by comparing state before and after graph invoke."""
+    tool_calls = ["supervisor"]
+    if result.get("recommendation") and not prev_state.get("recommendation"):
+        tool_calls.append("generate_service_recommendation")
+    if result.get("scheduling") and not prev_state.get("scheduling"):
+        tool_calls.append("find_appointment_slots")
+    if len(result.get("diagnostic_answers", [])) > len(prev_state.get("diagnostic_answers", [])):
+        tool_calls.append("diagnostic_questions_tool")
+    if result.get("failure_probability") is not None and prev_state.get("failure_probability") is None:
+        tool_calls.append("predict_engine_failure")
+    return tool_calls
 
 
 @router.post("/chat")
@@ -27,15 +112,16 @@ def chat(
     message = payload.get("message", "")
     vehicle = _resolve_vehicle(db, user, payload.get("vehicle_id"))
     state_key = _state_key(user.id, vehicle.id if vehicle else "none", payload.get("session_id"))
-    state = payload.get("state") or _CONVERSATIONS.get(state_key) or fresh_state()
+    state = payload.get("state") or _CONVERSATIONS.get(state_key) or _fresh_state(_vehicle_label(vehicle))
 
+    # Booking confirmation is handled outside the graph (requires DB access)
     if _is_booking_confirmation(message, state):
         appointment_data = _create_appointment_from_state(db, user, vehicle, state)
         state["phase"] = "confirmed"
         _CONVERSATIONS[state_key] = state
         return {
             "reply": (
-                f"Done. I booked {appointment_data['service_type']} for "
+                f"Done. I've booked {appointment_data['service_type']} for "
                 f"{appointment_data['vehicle']} on {appointment_data['date']} at {appointment_data['time']}."
             ),
             "step": "booking_confirmation",
@@ -44,17 +130,42 @@ def chat(
             "recommendation": state.get("recommendation"),
             "scheduling": state.get("scheduling"),
             "appointment": appointment_data,
-            "tool_calls": ["agentic_scheduling_agent"],
+            "tool_calls": ["supervisor", "agentic_scheduling_agent"],
         }
 
-    result = route_chat_turn(
-        message=message,
-        state=state,
-        vehicle_state=_vehicle_state(vehicle),
-        vehicle_label=_vehicle_label(vehicle),
-    )
-    _CONVERSATIONS[state_key] = result["state"]
-    return {**result, "appointment": None}
+    try:
+        graph_input = _to_graph_input(state, message, _vehicle_label(vehicle))
+        result = vehicle_graph.invoke(graph_input)
+
+        ai_messages = [m for m in result.get("messages", []) if isinstance(m, AIMessage)]
+        reply = ai_messages[-1].content if ai_messages else "I'm here to help. Could you describe your vehicle's issue?"
+
+        tool_calls = _infer_tool_calls(state, result)
+        serialized = _serialize_state(result)
+        _CONVERSATIONS[state_key] = serialized
+
+        return {
+            "reply": reply,
+            "step": result.get("phase", "general"),
+            "phase": result.get("phase", "general"),
+            "state": serialized,
+            "recommendation": result.get("recommendation"),
+            "scheduling": result.get("scheduling"),
+            "appointment": None,
+            "tool_calls": tool_calls,
+        }
+
+    except Exception:
+        return {
+            "reply": "I'm having trouble processing that right now. Please try again.",
+            "step": "error",
+            "phase": state.get("phase", "general"),
+            "state": state,
+            "recommendation": None,
+            "scheduling": None,
+            "appointment": None,
+            "tool_calls": [],
+        }
 
 
 @router.post("/schedule-agentic")
