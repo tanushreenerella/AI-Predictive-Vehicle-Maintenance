@@ -75,8 +75,8 @@ export default function LandingPage() {
           {/* Left */}
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full text-xs text-blue-400 font-medium mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-             AI Diagnostics · Predictive Alerts · Smart Monitoring · Maintenance Forecasting · Risk Analysis · Vehicle Health
+              <span className="" />
+             AI Diagnostics · Predictive Alerts · Risk Analysis · Vehicle Health
             </div>
 
             <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-[1.15] tracking-tight">
