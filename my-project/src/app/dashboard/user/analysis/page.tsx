@@ -98,35 +98,6 @@ export default function PredictiveAnalysisPage() {
         <h1 className="text-3xl font-bold text-white">AI Predictive Analysis</h1>
         <p className="text-gray-400">Enter sensor readings to predict engine failure probability</p>
       </div>
-
-      {/* Model card */}
-      <div className="bg-gray-800/40 border border-gray-700/60 rounded-2xl p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-4 h-4 text-blue-400" />
-          <h2 className="text-sm font-semibold text-white">ML Model — LightGBM</h2>
-          <span className="ml-auto text-xs px-2 py-0.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full">Live</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {[
-            { label: 'Accuracy', value: '63.65%' },
-            { label: 'Precision', value: '75.60%' },
-            { label: 'Recall', value: '62.53%' },
-            { label: 'F1 Score', value: '68.44%' },
-          ].map(({ label, value }) => (
-            <div key={label} className="bg-gray-900/60 rounded-xl p-3 text-center">
-              <p className="text-lg font-bold text-white">{value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-gray-700/60 text-xs text-gray-500">
-          <span>Trained on <span className="text-gray-400">15,627</span> sensor rows</span>
-          <span>Tested on <span className="text-gray-400">3,907</span> rows</span>
-          <span>Class balancing: <span className="text-gray-400">SMOTE</span></span>
-          <span>Features: <span className="text-gray-400">6 sensors + 3 engineered</span></span>
-        </div>
-      </div>
-
       <div className="grid lg:grid-cols-2 gap-6">
         {/* Input Form */}
         <div className="bg-gray-800/40 rounded-2xl p-6 border border-gray-700/50 space-y-5">
