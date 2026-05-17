@@ -279,7 +279,10 @@ def _is_booking_confirmation(message: str, state: Dict[str, Any]) -> bool:
     return (
         state.get("phase") == "scheduling"
         and bool((state.get("scheduling") or {}).get("selected_slot"))
-        and any(token in msg for token in ["confirm", "book it", "yes", "go ahead", "please do"])
+        and any(token in msg for token in [
+            "confirm", "book it", "yes", "go ahead", "please do",
+            "book", "ok", "okay", "sure", "yep", "yeah", "do it",
+        ])
     )
 
 
