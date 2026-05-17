@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from langchain_core.messages import AIMessage, HumanMessage
 from sqlalchemy.orm import Session
 
-from agents.agentic_graph.graph import vehicle_graph
+from agents.agentic_graph.graph import MIN_DIAGNOSTIC_ANSWERS, vehicle_graph
 from agents.agentic_graph.tools import find_appointment_slots
 from agents.agentic_scheduling_agent import agentic_scheduling_agent
 from backend.auth.dependencies import get_current_user
@@ -103,6 +103,25 @@ def _infer_tool_calls(prev_state: Dict[str, Any], result: Dict[str, Any]) -> lis
     return tool_calls
 
 
+def _diagnostic_answer_count(state: Dict[str, Any]) -> int:
+    answers = state.get("diagnostic_answers", [])
+    return len(answers) if isinstance(answers, list) else 0
+
+
+def _diagnostic_follow_up(state: Dict[str, Any]) -> str:
+    count = _diagnostic_answer_count(state)
+    questions = [
+        "When does the knocking noise happen most often: during startup, idle, acceleration, or braking?",
+        "Is the noise coming from the engine bay, wheels, or under the vehicle? Also, does it get louder with speed?",
+    ]
+    return questions[min(count, len(questions) - 1)]
+
+
+def _is_booking_request(message: str) -> bool:
+    msg = (message or "").lower()
+    return any(word in msg for word in ["book", "schedule", "appointment", "service"])
+
+
 @router.post("/chat")
 @router.post("/agent/chat")
 def chat(
@@ -165,6 +184,28 @@ def chat(
 
         tool_calls = _infer_tool_calls(state, result)
         serialized = _serialize_state(result)
+
+        if (
+            not _is_booking_request(message)
+            and (serialized.get("recommendation") or serialized.get("scheduling"))
+            and _diagnostic_answer_count(serialized) < MIN_DIAGNOSTIC_ANSWERS
+        ):
+            serialized["phase"] = "diagnosing"
+            serialized["recommendation"] = None
+            serialized["scheduling"] = None
+            serialized["issue_context"] = None
+            _CONVERSATIONS[state_key] = serialized
+            return {
+                "reply": _diagnostic_follow_up(serialized),
+                "step": "diagnosing",
+                "phase": "diagnosing",
+                "state": serialized,
+                "recommendation": None,
+                "scheduling": None,
+                "appointment": None,
+                "tool_calls": ["supervisor", "diagnostic_questions_tool"],
+            }
+
         _CONVERSATIONS[state_key] = serialized
 
         return {
@@ -269,6 +310,7 @@ def _is_scheduling_intent(message: str, state: Dict[str, Any]) -> bool:
     return (
         state.get("recommendation") is not None
         and state.get("scheduling") is None
+        and _diagnostic_answer_count(state) >= MIN_DIAGNOSTIC_ANSWERS
         and state.get("phase") in ("awaiting_booking", "recommended")
         and any(w in msg for w in ["yes", "ok", "okay", "sure", "book", "schedule", "please", "go ahead", "yep", "yeah"])
     )
