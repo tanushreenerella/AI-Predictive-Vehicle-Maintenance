@@ -15,16 +15,15 @@ from agents.agentic_graph.tools import (
     get_diagnostic_question,
     predict_engine_failure,
 )
-from agents.llm import call_llm
 
 load_dotenv()
+
+MIN_DIAGNOSTIC_ANSWERS = 2
 
 
 # ── Supervisor ────────────────────────────────────────────────────────────────
 
 def supervisor_node(state: VehicleAgentState) -> Dict[str, Any]:
-    messages = state.get("messages", [])
-    last_msg = messages[-1].content if messages else ""
     phase = state.get("phase", "general")
     answers_count = len(state.get("diagnostic_answers", []))
     has_recommendation = bool(state.get("recommendation"))
@@ -32,30 +31,20 @@ def supervisor_node(state: VehicleAgentState) -> Dict[str, Any]:
     has_scheduling = bool(state.get("scheduling"))
     has_risk = bool(state.get("risk_level"))
 
-    prompt = f"""You are a vehicle service supervisor. Decide which specialist to route to.
-
-Current state:
-- Phase: {phase}
-- Last user message: {last_msg}
-- Diagnostic answers collected: {answers_count} (max allowed: {MAX_DIAGNOSTIC_QUESTIONS})
-- Sensor data available: {has_sensor}
-- ML risk analyzed: {has_risk}
-- Has service recommendation: {has_recommendation}
-- Scheduling already done: {has_scheduling}
-
-Routing rules (follow strictly based on phase):
-- "diagnostic"      -> phase is "general" or "diagnosing" AND answers_count < {MAX_DIAGNOSTIC_QUESTIONS}
-- "sensor_ml"       -> sensor data is present but not yet analyzed
-- "recommendation"  -> phase is "recommended" (diagnosis just completed, need recommendation)
-- "scheduling"      -> phase is "awaiting_booking" (recommendation already shown, user wants to proceed)
-- "end"             -> phase is "scheduling" or "confirmed", OR task is complete
-
-Reply with ONLY one word."""
-
-
-    decision = call_llm(prompt).strip().lower().split()[0]
-    valid = {"diagnostic", "sensor_ml", "recommendation", "scheduling", "end"}
-    next_agent = decision if decision in valid else "diagnostic"
+    if phase in {"scheduling", "confirmed"} or has_scheduling:
+        next_agent = "end"
+    elif has_sensor and not has_risk:
+        next_agent = "sensor_ml"
+    elif phase == "recommended":
+        next_agent = "recommendation"
+    elif phase in {"general", "diagnosing"} and answers_count < MAX_DIAGNOSTIC_QUESTIONS:
+        next_agent = "diagnostic"
+    elif phase in {"general", "diagnosing"}:
+        next_agent = "recommendation"
+    elif phase == "awaiting_booking" and has_recommendation:
+        next_agent = "end"
+    else:
+        next_agent = "diagnostic"
 
     return {"next_agent": next_agent}
 
@@ -91,7 +80,9 @@ def diagnostic_node(state: VehicleAgentState) -> Dict[str, Any]:
     })
 
     question = tool_result.get("question", "Can you describe when the problem happens most often?")
-    enough = tool_result.get("enough_context", False)
+    enough = bool(tool_result.get("enough_context", False)) and len(answers) >= MIN_DIAGNOSTIC_ANSWERS
+    if not enough and not question:
+        question = "Can you describe when this problem happens most often?"
 
     return {
         "messages": [AIMessage(content=question)] if not enough else [],
