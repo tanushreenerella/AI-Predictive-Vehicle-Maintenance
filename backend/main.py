@@ -18,7 +18,8 @@ from backend.routes.analyze_route import router as analyze_router
 from backend.routes.reports import router as reports_router
 Base.metadata.create_all(bind=engine)
 
-
+import logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 app = FastAPI(title="Predictive Maintenance API")
 
 app.add_middleware(
