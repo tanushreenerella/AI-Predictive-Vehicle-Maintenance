@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Bot, Calendar, Clock, Send, Wrench, Zap, Activity, Stethoscope, BookOpen, ChevronDown } from 'lucide-react';
+import { Bot, Calendar, Clock, Send, Wrench, Zap, Activity, Stethoscope, BookOpen, ChevronDown, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
@@ -39,29 +39,12 @@ type VehicleOption = {
   ai_risk_level?: string | null;
 };
 
-type DiagnosticAnswer = {
-  answer: string;
-};
-
-type ConversationState = {
-  messages?: unknown[];
-  phase?: string;
-  symptom?: string | null;
-  diagnostic_answers?: DiagnosticAnswer[];
-  issue_context?: unknown;
-  recommendation?: Recommendation | null;
-  scheduling?: Scheduling | null;
-  _frontendDiagnosticGuard?: boolean;
-  [key: string]: unknown;
-};
-
 type ChatResponse = {
   reply?: string;
-  state?: ConversationState;
   recommendation?: Recommendation | null;
   scheduling?: Scheduling | null;
   appointment?: Appointment | null;
-  tool_calls?: unknown;
+  tool_calls?: string[];
 };
 
 type Message = {
@@ -74,6 +57,8 @@ type Message = {
   tool_calls?: string[];
 };
 
+type ChatLanguage = 'English' | 'Hindi' | 'Hinglish';
+
 const PROMPTS = [
   { icon: Stethoscope, label: 'Engine noise', text: 'My engine is making a strange knocking noise' },
   { icon: Zap, label: 'Battery issue', text: 'My battery is draining fast' },
@@ -84,6 +69,16 @@ const PROMPTS = [
 
 function now() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function newSessionId() {
+  return crypto.randomUUID();
+}
+
+function welcomeText(language: ChatLanguage) {
+  if (language === 'Hindi') return 'नमस्ते! किसी लक्षण के बारे में बताएँ। मैं चरण-दर-चरण निदान में मदद करूँगा/करूँगी।';
+  if (language === 'Hinglish') return 'Hi! Koi symptom batayein. Main aapko step-by-step diagnosis mein help karunga/karungi.';
+  return "Hi! I'm your AI vehicle assistant. Tell me a symptom and I'll diagnose it step by step, or say you want to book service.";
 }
 
 function TypingDots() {
@@ -104,7 +99,7 @@ export default function AgentChatPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'agent',
-      text: "Hi! I'm your AI vehicle assistant. Tell me a symptom and I'll diagnose it step by step, or say you want to book service.",
+      text: welcomeText('English'),
       ts: now(),
     },
   ]);
@@ -112,9 +107,10 @@ export default function AgentChatPage() {
   const [loading, setLoading] = useState(false);
   const [vehicles, setVehicles] = useState<VehicleOption[]>([]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>('');
-  const [conversationState, setConversationState] = useState<ConversationState | null>(null);
+  const [language, setLanguage] = useState<ChatLanguage>('English');
   const messagesRef = useRef<HTMLDivElement>(null);
   const isFirstRender = useRef(true);
+  const sessionIdRef = useRef<string>(newSessionId());
 
   useEffect(() => {
     fetchWithAuth(`${API_BASE}/vehicles/health/me`)
@@ -149,13 +145,13 @@ export default function AgentChatPage() {
         body: JSON.stringify({
           message: text,
           vehicle_id: selectedVehicleId || undefined,
-          state: conversationState,
+          session_id: sessionIdRef.current,
+          language,
         }),
       });
 
       const data: ChatResponse = await res.json();
 
-      setConversationState(data.state ?? null);
       setMessages((prev) => [
         ...prev,
         {
@@ -165,7 +161,7 @@ export default function AgentChatPage() {
           recommendation: data.recommendation ?? null,
           scheduling: data.scheduling ?? null,
           appointment: data.appointment ?? null,
-          tool_calls: Array.isArray(data.tool_calls) && data.tool_calls.length > 0 ? data.tool_calls : undefined,
+          tool_calls: data.tool_calls?.length ? data.tool_calls : undefined,
         },
       ]);
     } catch {
@@ -180,6 +176,29 @@ export default function AgentChatPage() {
 
   function sendMessage() {
     sendMessageWithText(input.trim());
+  }
+
+  async function clearChat(nextLanguage: ChatLanguage = language) {
+    if (loading) return;
+    const previousSessionId = sessionIdRef.current;
+    setInput('');
+    setMessages([{ role: 'agent', text: welcomeText(nextLanguage), ts: now() }]);
+
+    try {
+      await fetchWithAuth(`${API_BASE}/chat`, {
+        method: 'POST',
+        body: JSON.stringify({
+          reset: true,
+          vehicle_id: selectedVehicleId || undefined,
+          session_id: previousSessionId,
+          language: nextLanguage,
+        }),
+      });
+    } catch {
+      // The new client session is still empty; a later message creates fresh server state.
+    } finally {
+      sessionIdRef.current = newSessionId();
+    }
   }
 
   const urgencyColor = (urgency?: string) =>
@@ -205,13 +224,35 @@ export default function AgentChatPage() {
           </div>
         </div>
 
-        {vehicles.length > 0 && (
+        <div className="flex items-center gap-2">
+          <select
+            aria-label="Chat language"
+            value={language}
+            onChange={(e) => {
+              const nextLanguage = e.target.value as ChatLanguage;
+              setLanguage(nextLanguage);
+              void clearChat(nextLanguage);
+            }}
+            className="bg-gray-800/60 border border-gray-700/60 rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+          >
+            <option value="English">English</option>
+            <option value="Hindi">Hindi</option>
+            <option value="Hinglish">Hinglish</option>
+          </select>
+          <button
+            onClick={() => void clearChat()}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-700/60 px-3 py-2 text-xs text-gray-300 hover:bg-gray-800 disabled:opacity-40"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Clear Chat
+          </button>
+          {vehicles.length > 0 && (
           <div className="relative">
             <select
               value={selectedVehicleId}
               onChange={(e) => {
                 setSelectedVehicleId(e.target.value);
-                setConversationState(null);
               }}
               className="appearance-none bg-gray-800/60 border border-gray-700/60 rounded-xl px-4 py-2 pr-8 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
             >
@@ -223,7 +264,8 @@ export default function AgentChatPage() {
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
           </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Chat area */}
@@ -281,7 +323,7 @@ export default function AgentChatPage() {
 
               {message.role === 'agent' && message.tool_calls && message.tool_calls.length > 0 && (
                 <div className="flex items-center gap-1.5 flex-wrap max-w-[82%]">
-                  <span className="text-xs text-gray-600">Agents:</span>
+                  <span className="text-xs text-gray-600">Tools used:</span>
                   {message.tool_calls.map((tool, i) => (
                     <span key={i} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-800/60 border border-gray-700/40 rounded-full text-gray-500">
                       <span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />

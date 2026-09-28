@@ -16,9 +16,10 @@ from backend.session import get_db
 router = APIRouter(tags=["Agent Chat"])
 
 _CONVERSATIONS: Dict[str, Dict[str, Any]] = {}
+_SUPPORTED_LANGUAGES = {"English", "Hindi", "Hinglish"}
 
 
-def _fresh_state(vehicle_label: str) -> Dict[str, Any]:
+def _fresh_state(vehicle_label: str, language: str = "English") -> Dict[str, Any]:
     return {
         "messages": [],
         "phase": "general",
@@ -32,44 +33,43 @@ def _fresh_state(vehicle_label: str) -> Dict[str, Any]:
         "failure_probability": None,
         "risk_level": None,
         "next_agent": "",
+        "language": language,
     }
 
 
 @router.post("/chat")
 @router.post("/agent/chat")
-def chat(
-    payload: dict,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
+def chat(payload: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     message = payload.get("message", "")
     vehicle = _resolve_vehicle(db, user, payload.get("vehicle_id"))
     state_key = _state_key(user.id, vehicle.id if vehicle else "none", payload.get("session_id"))
-    state = payload.get("state") or _CONVERSATIONS.get(state_key) or _fresh_state(_vehicle_label(vehicle))
+    language = payload.get("language", "English")
+    language = language if language in _SUPPORTED_LANGUAGES else "English"
+
+    if payload.get("reset"):
+        _CONVERSATIONS.pop(state_key, None)
+        state = _fresh_state(_vehicle_label(vehicle), language)
+        return {"reply": "", "step": "general", "phase": "general", "state": state,
+                "recommendation": None, "scheduling": None, "appointment": None, "tool_calls": []}
+
+    # server memory is the only source of truth (client state is ignored)
+    state = _CONVERSATIONS.get(state_key) or _fresh_state(_vehicle_label(vehicle), language)
+    state["language"] = language
 
     try:
         result = run_turn(
             state, message, _vehicle_label(vehicle), _vehicle_state(vehicle),
             book_fn=lambda rec, sched: _create_appointment_from_state(
                 db, user, vehicle, {"recommendation": rec, "scheduling": sched}),
+            language=language,
         )
-        result = _enforce_chat_turn_guards(state, result)
         _CONVERSATIONS[state_key] = result["state"]
         return result
     except Exception:
         logging.exception("agent turn failed")
-        return {
-            "reply": "I'm having trouble processing that right now. Please try again.",
-            "step": "error",
-            "phase": state.get("phase", "general"),
-            "state": state,
-            "recommendation": None,
-            "scheduling": None,
-            "appointment": None,
-            "tool_calls": [],
-        }
-
-
+        return {"reply": "I'm having trouble processing that right now. Please try again.",
+                "step": "error", "phase": state.get("phase", "general"), "state": state,
+                "recommendation": None, "scheduling": None, "appointment": None, "tool_calls": []}
 @router.post("/schedule-agentic")
 def schedule_agentic(
     payload: dict,
@@ -163,44 +163,6 @@ def _proposed_slot(state: Any) -> Optional[Dict[str, Any]]:
     return slot
 
 
-def _enforce_chat_turn_guards(previous_state: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
-    """Defence in depth for the strict one-booking-action-per-turn contract."""
-    tool_calls = result.get("tool_calls") or []
-    state_changing = {"recommend_service", "propose_appointment_slot", "book_appointment"}
-    used_actions = [name for name in tool_calls if name in state_changing]
-
-    if len(used_actions) > 1:
-        # Do not persist or display partial state from an invalid chained turn.
-        clean_state = {**previous_state, "scheduling": None}
-        return {
-            "reply": "I’ll take that one step at a time. Would you like me to start with a service recommendation?",
-            "step": previous_state.get("phase", "general"),
-            "phase": previous_state.get("phase", "general"),
-            "state": clean_state,
-            "recommendation": None,
-            "scheduling": None,
-            "appointment": None,
-            "tool_calls": ["supervisor"],
-        }
-
-    # A slot card is valid only in the exact turn that proposed that slot.
-    if "propose_appointment_slot" not in tool_calls:
-        result["scheduling"] = None
-
-    # Informational health turns cannot revive a previous recommendation or slot.
-    if "get_vehicle_health" in tool_calls:
-        result["recommendation"] = None
-        result["scheduling"] = None
-        result["state"] = {
-            **result.get("state", previous_state),
-            "recommendation": None,
-            "scheduling": None,
-            "phase": "general",
-        }
-
-    return result
-
-
 def _create_appointment_from_state(
     db: Session,
     user: User,
@@ -230,13 +192,10 @@ def _create_appointment(
     slot: Dict[str, Any],
 ) -> Dict[str, Any]:
     try:
-        appointment_date = date.fromisoformat(str(slot.get("date")))
+        appointment_date = date.fromisoformat(str(slot["date"]))
+        appointment_time = time.fromisoformat(str(slot["time"]))
     except Exception:
-        appointment_date = date.today()
-    try:
-        appointment_time = time.fromisoformat(str(slot.get("time") or "10:00"))
-    except Exception:
-        appointment_time = time(10, 0)
+        raise HTTPException(status_code=400, detail="Invalid appointment slot")
 
     appointment = Appointment(
         user_id=user.id,
