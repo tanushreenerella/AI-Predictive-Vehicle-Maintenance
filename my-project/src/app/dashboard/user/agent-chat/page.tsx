@@ -160,7 +160,7 @@ export default function AgentChatPage() {
         ...prev,
         {
           role: 'agent',
-          text: data.reply,
+          text: data.reply ?? '',
           ts: now(),
           recommendation: data.recommendation ?? null,
           scheduling: data.scheduling ?? null,

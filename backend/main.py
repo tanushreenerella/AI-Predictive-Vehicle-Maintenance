@@ -18,13 +18,15 @@ from backend.routes.analyze_route import router as analyze_router
 from backend.routes.reports import router as reports_router
 Base.metadata.create_all(bind=engine)
 
-_ORIGIN_RE = re.compile(r"https?://(localhost(:\d+)?|[a-zA-Z0-9-]+\.vercel\.app)")
 
 app = FastAPI(title="Predictive Maintenance API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=_ORIGIN_RE.pattern,
+    allow_origins=[
+        "http://localhost:3000",
+        "https://ai-predictive-vehicle-maintenance.vercel.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
