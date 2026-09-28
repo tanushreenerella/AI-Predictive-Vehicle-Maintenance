@@ -53,6 +53,7 @@ def chat(
             book_fn=lambda rec, sched: _create_appointment_from_state(
                 db, user, vehicle, {"recommendation": rec, "scheduling": sched}),
         )
+        result = _enforce_chat_turn_guards(state, result)
         _CONVERSATIONS[state_key] = result["state"]
         return result
     except Exception:
@@ -160,6 +161,44 @@ def _proposed_slot(state: Any) -> Optional[Dict[str, Any]]:
     if not isinstance(slot, dict) or not slot.get("date") or not slot.get("time"):
         return None
     return slot
+
+
+def _enforce_chat_turn_guards(previous_state: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+    """Defence in depth for the strict one-booking-action-per-turn contract."""
+    tool_calls = result.get("tool_calls") or []
+    state_changing = {"recommend_service", "propose_appointment_slot", "book_appointment"}
+    used_actions = [name for name in tool_calls if name in state_changing]
+
+    if len(used_actions) > 1:
+        # Do not persist or display partial state from an invalid chained turn.
+        clean_state = {**previous_state, "scheduling": None}
+        return {
+            "reply": "I’ll take that one step at a time. Would you like me to start with a service recommendation?",
+            "step": previous_state.get("phase", "general"),
+            "phase": previous_state.get("phase", "general"),
+            "state": clean_state,
+            "recommendation": None,
+            "scheduling": None,
+            "appointment": None,
+            "tool_calls": ["supervisor"],
+        }
+
+    # A slot card is valid only in the exact turn that proposed that slot.
+    if "propose_appointment_slot" not in tool_calls:
+        result["scheduling"] = None
+
+    # Informational health turns cannot revive a previous recommendation or slot.
+    if "get_vehicle_health" in tool_calls:
+        result["recommendation"] = None
+        result["scheduling"] = None
+        result["state"] = {
+            **result.get("state", previous_state),
+            "recommendation": None,
+            "scheduling": None,
+            "phase": "general",
+        }
+
+    return result
 
 
 def _create_appointment_from_state(
