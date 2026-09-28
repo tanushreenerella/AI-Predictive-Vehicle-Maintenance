@@ -43,7 +43,8 @@ def synthetic_sensor_data_for_vehicle(vehicle: Vehicle) -> dict:
 
 
 def apply_vehicle_analysis(vehicle: Vehicle, db: Session, sensor_data: dict | None = None) -> dict:
-    sensor_data = sensor_data or synthetic_sensor_data_for_vehicle(vehicle)
+    if sensor_data is None:
+        raise ValueError("Sensor data is required to run vehicle analysis")
     result = predict_failure(sensor_data)
 
     vehicle.ai_risk_level = result["riskLevel"]

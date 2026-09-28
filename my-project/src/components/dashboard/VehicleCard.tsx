@@ -8,7 +8,8 @@ interface VehicleCardProps {
     id: number;
     name: string;
     registration: string;
-    health: number;
+    health: number | null;
+    analyzed?: boolean;
     status: 'optimal' | 'warning' | 'critical';
     lastService?: string;
     nextService?: string;
@@ -79,18 +80,22 @@ export default function VehicleCard({ vehicle }: VehicleCardProps) {
       <div className="mb-4">
         <div className="flex items-center justify-between text-sm mb-2">
           <span className="text-gray-400">Health Score</span>
-          <span className="font-semibold text-white">{vehicle.health}%</span>
+          <span className="font-semibold text-white">
+            {vehicle.analyzed === false ? 'Not analyzed yet' : `${vehicle.health ?? 0}%`}
+          </span>
         </div>
-        <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full ${
-              vehicle.health > 80 ? 'bg-blue-500' :
-              vehicle.health > 60 ? 'bg-yellow-500' :
-              'bg-red-500'
-            }`}
-            style={{ width: `${vehicle.health}%` }}
-          />
-        </div>
+        {vehicle.analyzed !== false && (
+          <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${
+                (vehicle.health ?? 0) > 80 ? 'bg-blue-500' :
+                (vehicle.health ?? 0) > 60 ? 'bg-yellow-500' :
+                'bg-red-500'
+              }`}
+              style={{ width: `${vehicle.health ?? 0}%` }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Quick Stats */}

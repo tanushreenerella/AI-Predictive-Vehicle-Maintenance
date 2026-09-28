@@ -10,7 +10,7 @@ import { normalizeDashboardVehicle } from '@/lib/normalizers/vehicle';
 import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
-const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
 export default function UserDashboard() {
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -54,10 +54,11 @@ export default function UserDashboard() {
   }, [router]);
 
   const totalVehicles = vehicles.length;
-  const atRisk = vehicles.filter(v => v.status === 'warning' || v.status === 'critical').length;
-  const analysed = vehicles.filter(v => v.riskLevel).length;
-  const avgHealth = totalVehicles > 0
-    ? Math.round(vehicles.reduce((s, v) => s + v.health, 0) / totalVehicles)
+  const analysedVehicles = vehicles.filter(v => v.analyzed);
+  const atRisk = analysedVehicles.filter(v => v.status === 'warning' || v.status === 'critical').length;
+  const analysed = analysedVehicles.length;
+  const avgHealth = analysedVehicles.length > 0
+    ? Math.round(analysedVehicles.reduce((s, v) => s + (v.health ?? 0), 0) / analysedVehicles.length)
     : 0;
   const avgFuel = totalVehicles > 0
     ? Math.round(vehicles.reduce((s, v) => s + (v.fuelLevel || 0), 0) / totalVehicles)

@@ -134,6 +134,21 @@ def chat(
     state_key = _state_key(user.id, vehicle.id if vehicle else "none", payload.get("session_id"))
     state = payload.get("state") or _CONVERSATIONS.get(state_key) or _fresh_state(_vehicle_label(vehicle))
 
+    # A health-status request is informational. It must not consume a
+    # diagnostic answer or advance the user into a recommendation flow.
+    if _is_vehicle_health_request(message):
+        _CONVERSATIONS[state_key] = state
+        return {
+            "reply": _vehicle_health_reply(vehicle),
+            "step": "vehicle_health",
+            "phase": state.get("phase", "general"),
+            "state": state,
+            "recommendation": state.get("recommendation"),
+            "scheduling": state.get("scheduling"),
+            "appointment": None,
+            "tool_calls": ["vehicle_health"],
+        }
+
     # Scheduling intent — user said yes to a recommendation, find a slot
     if _is_scheduling_intent(message, state):
         slots = find_appointment_slots.invoke({
@@ -251,14 +266,15 @@ def schedule_agentic(
     )
 
     appointment_data = None
-    if payload.get("confirm"):
+    proposed_slot = _proposed_slot(payload.get("state"))
+    if payload.get("confirm") and proposed_slot:
         appointment_data = _create_appointment(
             db=db,
             user=user,
             vehicle=vehicle,
             service_type=decision.get("service_type") or "AI Recommended Service",
             urgency=decision.get("recommended_urgency") or "MEDIUM",
-            slot=decision.get("selected_slot") or {},
+            slot=proposed_slot,
         )
 
     return {
@@ -266,7 +282,12 @@ def schedule_agentic(
         "appointment": appointment_data,
         "reply": (
             f"Booked {appointment_data['service_type']} for {appointment_data['date']} at {appointment_data['time']}."
-            if appointment_data else decision.get("reply")
+            if appointment_data
+            else (
+                "I need to propose a slot before I can book it. "
+                "Ask me to find a slot, then confirm that proposed time."
+                if payload.get("confirm") else decision.get("reply")
+            )
         ),
     }
 
@@ -310,8 +331,7 @@ def _is_scheduling_intent(message: str, state: Dict[str, Any]) -> bool:
     return (
         state.get("recommendation") is not None
         and state.get("scheduling") is None
-        and _diagnostic_answer_count(state) >= MIN_DIAGNOSTIC_ANSWERS
-        and state.get("phase") in ("awaiting_booking", "recommended")
+        and state.get("phase") in ("awaiting_booking", "recommended", "general")
         and any(w in msg for w in ["yes", "ok", "okay", "sure", "book", "schedule", "please", "go ahead", "yep", "yeah"])
     )
 
@@ -321,11 +341,38 @@ def _is_booking_confirmation(message: str, state: Dict[str, Any]) -> bool:
     return (
         state.get("phase") == "scheduling"
         and bool((state.get("scheduling") or {}).get("selected_slot"))
-        and any(token in msg for token in [
-            "confirm", "book it", "yes", "go ahead", "please do",
-            "book", "ok", "okay", "sure", "yep", "yeah", "do it",
-        ])
+        # A bare affirmation is not a booking instruction. This prevents an
+        # accidental appointment when a user merely acknowledges a proposed
+        # time. "Yes, find a slot" is handled above as scheduling intent.
+        and any(token in msg for token in ["confirm", "book it", "please book it"])
     )
+
+
+def _is_vehicle_health_request(message: str) -> bool:
+    msg = (message or "").lower()
+    return "health" in msg and any(token in msg for token in ["show", "status", "my vehicle", "vehicle health"])
+
+
+def _vehicle_health_reply(vehicle: Optional[Vehicle]) -> str:
+    if not vehicle:
+        return "I couldn't find a vehicle on your account yet. Add one to begin health monitoring."
+    if vehicle.ai_last_analyzed is None:
+        return f"{_vehicle_label(vehicle)} has not been analyzed yet. Run AI Analysis to get its health status."
+    probability = vehicle.ai_failure_probability
+    probability_text = f"{probability * 100:.0f}%" if isinstance(probability, (int, float)) else "unavailable"
+    risk = vehicle.ai_risk_level or "unavailable"
+    return f"{_vehicle_label(vehicle)} is currently {risk} risk with a {probability_text} predicted failure probability."
+
+
+def _proposed_slot(state: Any) -> Optional[Dict[str, Any]]:
+    """Accept confirmation only for a slot returned in a prior scheduling turn."""
+    if not isinstance(state, dict):
+        return None
+    scheduling = state.get("scheduling")
+    slot = scheduling.get("selected_slot") if isinstance(scheduling, dict) else None
+    if not isinstance(slot, dict) or not slot.get("date") or not slot.get("time"):
+        return None
+    return slot
 
 
 def _create_appointment_from_state(

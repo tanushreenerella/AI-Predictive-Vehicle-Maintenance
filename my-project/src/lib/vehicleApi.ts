@@ -1,7 +1,7 @@
 import { Vehicle } from "./types";
 import { normalizeVehicle } from "@/lib/normalizers/vehicle";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
-const BASE_URL = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
 
 // Backend request payload (snake_case)
 export interface CreateVehiclePayload {

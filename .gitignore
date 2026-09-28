@@ -1,6 +1,8 @@
 # 🔐 Environment variables
 .env
+.env.local
 .env.*
+!.env.example
 
 # 🐍 Python
 __pycache__/
@@ -37,6 +39,14 @@ analysis_*.txt
 *.onnx
 *.pkl
 *.h5
+
+# The production predictor and its SHAP background must be deployed together.
+# Keep other generated joblib files out of version control unless explicitly
+# whitelisted here.
+*.joblib
+!agents/failure_prediction/model.joblib
+!agents/failure_prediction/scaler.joblib
+!agents/failure_prediction/shap_background.joblib
 
 # 📦 Zipped files
 *.zip

@@ -15,7 +15,6 @@ from backend.auth.dependencies import get_current_user
 
 from agents.agentic_scheduling_agent import agentic_scheduling_agent
 from agents.reschedule_warning_agent import reschedule_warning_agent
-from backend.services.vehicle_analysis import ensure_vehicle_analysis
 
 router = APIRouter(prefix="/schedule", tags=["Scheduling"])
 
@@ -38,8 +37,6 @@ def get_schedule_suggestion(
 
     if not vehicle:
         raise HTTPException(status_code=404, detail="Vehicle not found")
-
-    ensure_vehicle_analysis(vehicle, db)
 
     vehicle_state = {
         "risk_level": vehicle.ai_risk_level,

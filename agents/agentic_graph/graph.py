@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.graph import END, START, StateGraph
 
-from agents.agentic_graph.state import VehicleAgentState
+from agents.agentic_graph.state import VehicleAgentState, build_ml_result
 from agents.agentic_graph.tools import (
     MAX_DIAGNOSTIC_QUESTIONS,
     find_appointment_slots,
@@ -102,19 +102,30 @@ def route_from_diagnostic(state: VehicleAgentState) -> str:
     return END
 
 def sensor_node(state: VehicleAgentState) -> Dict[str, Any]:
+    """Sensor Data → Random Forest → SHAP → ML Result → LangGraph state.
+
+    Runs the real prediction pipeline (agents/failure_prediction/predict.py)
+    on whatever sensor_data is in state, and stores its COMPLETE structured
+    result (probability, risk level, top SHAP features, the sensor values
+    used) in state.ml_result. Nothing here is invented — if the model
+    couldn't produce a prediction, that failure is stored honestly too.
+    """
     sensor_data = state.get("sensor_data") or {}
 
     tool_result = predict_engine_failure.invoke({"sensor_data": sensor_data})
+    ml_result = build_ml_result(tool_result)
 
-    prob = tool_result.get("failureProbability")
-    risk = tool_result.get("riskLevel", "UNKNOWN")
+    prob = ml_result["failure_probability"]
+    risk = ml_result["risk_level"]
     summary = (
         f"ML analysis complete. Risk: {risk}, Failure probability: {prob:.1%}"
-        if isinstance(prob, float) else "ML analysis complete."
+        if isinstance(prob, (int, float))
+        else f"ML analysis unavailable: {ml_result.get('message') or 'unknown error'}"
     )
 
     return {
         "messages": [AIMessage(content=summary)],
+        "ml_result": ml_result,
         "failure_probability": prob,
         "risk_level": risk,
         "phase": "analyzed",
@@ -128,7 +139,11 @@ def recommendation_node(state: VehicleAgentState) -> Dict[str, Any]:
         "answers": state.get("diagnostic_answers", []),
         "summary": state.get("symptom", "unknown"),
     }
-    risk_level = state.get("risk_level") or "MEDIUM"
+    # Read the actual ML result from state — never fabricate a risk level.
+    # "NOT_AVAILABLE" is an honest sentinel meaning no sensor-based
+    # prediction has run for this conversation, distinct from a real
+    # LOW/MEDIUM/HIGH/ERROR value the model actually produced.
+    risk_level = state.get("risk_level") or "NOT_AVAILABLE"
 
     tool_result = generate_service_recommendation.invoke({
         "issue_context": issue_context,

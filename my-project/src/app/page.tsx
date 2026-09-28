@@ -16,7 +16,7 @@ const features = [
   {
     icon: Shield,
     title: 'Failure Prediction',
-    description: 'LightGBM model trained on engine sensor data with SMOTE balancing predicts failures before they cause breakdowns.',
+    description: 'Random Forest model predicts failures from engine sensor data before they cause breakdowns.',
   },
   {
     icon: Cpu,
@@ -32,7 +32,7 @@ const features = [
 
 const pipeline = [
   { icon: Activity, step: 1, title: 'Submit Sensor Data', desc: 'RPM, temperature, oil pressure, battery voltage' },
-  { icon: Brain, step: 2, title: 'ML Risk Scoring', desc: 'LightGBM model scores failure probability in real time' },
+  { icon: Brain, step: 2, title: 'ML Risk Scoring', desc: 'Random Forest scores failure probability in real time' },
   { icon: Bot, step: 3, title: 'AI Agent Diagnosis', desc: 'LangGraph agents diagnose, recommend, and schedule' },
   { icon: Calendar, step: 4, title: 'Auto-book Service', desc: 'Appointment confirmed in the same conversation' },
 ];
@@ -270,7 +270,7 @@ export default function LandingPage() {
             <div className="w-6 h-6 bg-blue-600 rounded-lg" />
             <span className="font-bold text-white text-sm">ProactiveAI</span>
           </div>
-          <p className="text-gray-600 text-xs">Built with LangGraph + LightGBM. All AI runs live.</p>
+          <p className="text-gray-600 text-xs">Built with LangGraph + Random Forest. All AI runs live.</p>
         </div>
       </footer>
     </div>

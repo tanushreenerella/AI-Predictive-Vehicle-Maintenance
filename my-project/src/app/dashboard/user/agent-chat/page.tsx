@@ -82,33 +82,8 @@ const PROMPTS = [
   { icon: BookOpen, label: 'Next maintenance', text: 'When is my next maintenance due?' },
 ];
 
-const MIN_DIAGNOSTIC_ANSWERS = 2;
-
-const DIAGNOSTIC_FOLLOW_UPS = [
-  'When does the knocking noise happen most often: during startup, idle, acceleration, or braking?',
-  'Is the noise coming from the engine bay, wheels, or under the vehicle? Also, does it get louder with speed?',
-];
-
 function now() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function isBookingRequest(text: string) {
-  const msg = text.toLowerCase();
-  return ['book', 'schedule', 'appointment', 'service'].some((word) => msg.includes(word));
-}
-
-function diagnosticAnswerCount(state: ConversationState | null) {
-  return Array.isArray(state?.diagnostic_answers) ? state.diagnostic_answers.length : 0;
-}
-
-function diagnosticQuestion(count: number) {
-  return DIAGNOSTIC_FOLLOW_UPS[Math.min(count, DIAGNOSTIC_FOLLOW_UPS.length - 1)];
-}
-
-function hasPrematureRecommendation(data: ChatResponse, text: string) {
-  const count = diagnosticAnswerCount(data?.state ?? null);
-  return !isBookingRequest(text) && Boolean(data?.recommendation || data?.scheduling) && count < MIN_DIAGNOSTIC_ANSWERS;
 }
 
 function TypingDots() {
@@ -169,73 +144,16 @@ export default function AgentChatPage() {
     setLoading(true);
 
     try {
-      let stateForRequest = conversationState;
-
-      if (conversationState?._frontendDiagnosticGuard) {
-        const answers = [
-          ...(Array.isArray(conversationState.diagnostic_answers) ? conversationState.diagnostic_answers : []),
-          { answer: text },
-        ];
-
-        stateForRequest = {
-          ...conversationState,
-          diagnostic_answers: answers,
-          recommendation: null,
-          scheduling: null,
-          issue_context: null,
-          phase: answers.length >= MIN_DIAGNOSTIC_ANSWERS ? 'recommended' : 'diagnosing',
-        };
-
-        if (answers.length < MIN_DIAGNOSTIC_ANSWERS) {
-          setConversationState(stateForRequest);
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: 'agent',
-              text: diagnosticQuestion(answers.length),
-              ts: now(),
-              tool_calls: ['supervisor', 'diagnostic_questions_tool'],
-            },
-          ]);
-          return;
-        }
-      }
-
       const res = await fetchWithAuth(`${API_BASE}/chat`, {
         method: 'POST',
         body: JSON.stringify({
           message: text,
           vehicle_id: selectedVehicleId || undefined,
-          state: stateForRequest,
+          state: conversationState,
         }),
       });
 
       const data: ChatResponse = await res.json();
-
-      if (hasPrematureRecommendation(data, text)) {
-        const guardedState = {
-          ...(data.state ?? {}),
-          _frontendDiagnosticGuard: true,
-          phase: 'diagnosing',
-          symptom: data.state?.symptom || text,
-          diagnostic_answers: Array.isArray(data.state?.diagnostic_answers) ? data.state.diagnostic_answers : [],
-          issue_context: null,
-          recommendation: null,
-          scheduling: null,
-        };
-
-        setConversationState(guardedState);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'agent',
-            text: diagnosticQuestion(diagnosticAnswerCount(guardedState)),
-            ts: now(),
-            tool_calls: ['supervisor', 'diagnostic_questions_tool'],
-          },
-        ]);
-        return;
-      }
 
       setConversationState(data.state ?? null);
       setMessages((prev) => [

@@ -6,7 +6,7 @@ import { analyzeapi } from "@/lib/analyzeapi";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { AlertTriangle, CheckCircle, Activity, ChevronRight } from "lucide-react";
 
-const API_BASE = "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
 
 type SensorData = {
   engine_rpm: string;
@@ -15,6 +15,11 @@ type SensorData = {
   coolant_pressure: string;
   lub_oil_temp: string;
   coolant_temp: string;
+};
+
+type ShapFeature = {
+  feature: string;
+  impact: "high" | "medium" | "low";
 };
 
 const fields: { key: keyof SensorData; label: string; placeholder: string }[] = [
@@ -90,6 +95,9 @@ export default function PredictiveAnalysisPage() {
   };
 
   const probPercent = result ? Math.round(result.failureProbability * 100) : 0;
+  const topFeatures: ShapFeature[] = Array.isArray(result?.top_features)
+    ? result.top_features.slice(0, 3)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -211,25 +219,44 @@ export default function PredictiveAnalysisPage() {
                 </div>
               </div>
 
-              {/* Details grid */}
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="bg-gray-900/50 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs">Component</p>
-                  <p className="text-white font-medium">{result.component}</p>
+              {/* The backend returns these directly from its existing SHAP calculation. */}
+              <div className="bg-gray-900/50 rounded-xl p-4 border border-gray-700/60">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-white">Top contributing factors</h3>
+                  <span className="text-xs text-gray-500">SHAP explanation</span>
                 </div>
-                <div className="bg-gray-900/50 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs">Failure Window</p>
-                  <p className="text-white font-medium">{result.estimatedFailureWindow}</p>
-                </div>
-                <div className="bg-gray-900/50 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs">Confidence</p>
-                  <p className="text-white font-medium">{Math.round(result.confidence * 100)}%</p>
-                </div>
-                <div className="bg-gray-900/50 rounded-lg p-3">
-                  <p className="text-gray-500 text-xs">Model</p>
-                  <p className="text-white font-medium capitalize">{result.model_status}</p>
-                </div>
+                {topFeatures.length > 0 ? (
+                  <ol className="space-y-2">
+                    {topFeatures.map((item, index) => (
+                      <li key={`${item.feature}-${index}`} className="flex items-center justify-between gap-3 text-sm">
+                        <span className="text-gray-300 capitalize">{item.feature.replace(/_/g, " ")}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          item.impact === "high"
+                            ? "bg-red-500/15 text-red-300"
+                            : item.impact === "medium"
+                              ? "bg-yellow-500/15 text-yellow-300"
+                              : "bg-blue-500/15 text-blue-300"
+                        }`}>
+                          {item.impact} impact
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-xs text-gray-500">Feature explanations are unavailable for this result.</p>
+                )}
               </div>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+  <div className="bg-gray-900/50 rounded-lg p-3">
+    <p className="text-gray-500 text-xs">Component</p>
+    <p className="text-white font-medium">{result.component}</p>
+  </div>
+  <div className="bg-gray-900/50 rounded-lg p-3">
+    <p className="text-gray-500 text-xs">Model Status</p>
+    <p className="text-white font-medium capitalize">{result.model_status}</p>
+  </div>
+</div>
 
               {/* Message */}
               <p className="text-gray-400 text-sm">{result.message}</p>

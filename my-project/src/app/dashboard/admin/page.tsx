@@ -58,7 +58,7 @@ export default function AdminDashboard() {
 
   const systemMetrics = [
     { label: 'API Response Time', value: '245ms', target: '<500ms', status: 'good' },
-    { label: 'Prediction Accuracy', value: '92.4%', target: '>90%', status: 'good' },
+    { label: 'Random Forest Accuracy', value: '63.3%', target: 'Recall: 71.4% · Failure F1: 59.0%', status: 'good' },
     { label: 'System Uptime', value: '99.8%', target: '99.9%', status: 'warning' },
     { label: 'Data Processing', value: '1.2M/day', target: '2M/day', status: 'good' }
   ];

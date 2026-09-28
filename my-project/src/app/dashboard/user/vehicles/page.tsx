@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Car, Plus, CheckCircle, Activity, Calendar, Gauge } from 'lucide-react';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
-const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
 type Vehicle = {
   id: number | string;

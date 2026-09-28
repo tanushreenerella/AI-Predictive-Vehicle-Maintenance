@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
-const API_BASE = 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
 
 export default function ReceiptPage() {
   const { id } = useParams();

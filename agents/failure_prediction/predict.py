@@ -2,7 +2,15 @@ import os
 import pickle
 from typing import Any, Dict
 
-import numpy as np
+import pandas as pd
+
+from agents.failure_prediction.explain import BACKGROUND_PATH, FailureExplainer, top_features
+from agents.failure_prediction.features import (
+    BASE_FEATURE_COLUMNS,
+    FAILURE_LABEL,
+    engineer_features,
+    risk_level_for,
+)
 
 
 def _base_dir() -> str:
@@ -34,124 +42,118 @@ def load_model():
             except Exception as exc:
                 print(f"Failed to load {model_path}: {exc}")
 
-    print("Model file not found, using heuristic fallback")
-    return None, None, "heuristic"
-
-
-def create_fallback_model():
-    from sklearn.preprocessing import StandardScaler
-    from xgboost import XGBClassifier
-
-    np.random.seed(42)
-    x_dummy = np.random.randn(100, 6)
-    y_dummy = np.random.choice([0, 1], 100, p=[0.8, 0.2])
-
-    fallback_scaler = StandardScaler()
-    x_scaled = fallback_scaler.fit_transform(x_dummy)
-
-    fallback_model = XGBClassifier(n_estimators=10, random_state=42)
-    fallback_model.fit(x_scaled, y_dummy)
-
-    print("Using fallback model")
-    return fallback_model, fallback_scaler
+    print("Model file not found")
+    return None, None, "unavailable"
 
 
 try:
     model, scaler, MODEL_STATUS = load_model()
 except Exception as exc:
-    print(f"Prediction model initialization failed, using heuristic fallback: {exc}")
+    print(f"Prediction model initialization failed: {exc}")
     model, scaler = None, None
-    MODEL_STATUS = "heuristic"
+    MODEL_STATUS = "unavailable"
+
+# Column index of FAILURE_LABEL within model.predict_proba(...)'s output.
+# Resolved once at import time (rather than assumed) so training and
+# inference can never silently disagree on which column is "failure".
+_FAILURE_COL = None
+if model is not None:
+    try:
+        _FAILURE_COL = list(model.classes_).index(FAILURE_LABEL)
+    except (AttributeError, ValueError) as exc:
+        print(f"Model does not expose classes_ compatible with FAILURE_LABEL: {exc}")
+        model, scaler = None, None
+        MODEL_STATUS = "unavailable"
+
+# SHAP explainer — optional. Explainability is an add-on: if shap isn't
+# installed or the background artifact is missing, predictions still work,
+# they just won't include "top_features".
+_explainer = None
+if model is not None and _FAILURE_COL is not None:
+    if not os.path.exists(BACKGROUND_PATH):
+        print(
+            "SHAP background artifact is missing at "
+            f"{BACKGROUND_PATH}; predictions will omit top_features. "
+            "Deploy agents/failure_prediction/shap_background.joblib with the model."
+        )
+    else:
+        try:
+            import joblib as _joblib
+
+            _background = _joblib.load(BACKGROUND_PATH)
+            _explainer = FailureExplainer(model, _background, _FAILURE_COL)
+            print(f"SHAP explainer ready (background: {BACKGROUND_PATH})")
+        except Exception as exc:
+            print(f"SHAP explainer unavailable, predictions will omit top_features: {exc}")
+            _explainer = None
 
 
 def predict_failure(sensor_data: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        feature_order = [
-            "engine_rpm",
-            "lub_oil_pressure",
-            "fuel_pressure",
-            "coolant_pressure",
-            "lub_oil_temp",
-            "coolant_temp",
-        ]
-
-        defaults = {
-            "engine_rpm": 3000.0,
-            "lub_oil_pressure": 2.0,
-            "fuel_pressure": 2.5,
-            "coolant_pressure": 1.2,
-            "lub_oil_temp": 90.0,
-            "coolant_temp": 85.0,
+    if model is None or scaler is None or _FAILURE_COL is None:
+        return {
+            "component": "Engine",
+            "error": True,
+            # Not a real prediction — callers must check "error" before using
+            # these, but the keys are present so code expecting them doesn't crash.
+            "failureProbability": None,
+            "riskLevel": "ERROR",
+            "message": "Prediction model is not available on this server.",
+            "model_status": MODEL_STATUS,
+            "input_features": sensor_data,
         }
 
-        features = []
-        for feature in feature_order:
+    defaults = {
+        "engine_rpm": 3000.0,
+        "lub_oil_pressure": 2.0,
+        "fuel_pressure": 2.5,
+        "coolant_pressure": 1.2,
+        "lub_oil_temp": 90.0,
+        "coolant_temp": 85.0,
+    }
+
+    try:
+        row = {}
+        for feature in BASE_FEATURE_COLUMNS:
             value = sensor_data.get(feature, defaults[feature])
             try:
-                features.append(float(value))
+                row[feature] = float(value)
             except (ValueError, TypeError):
-                features.append(defaults[feature])
-        rpm_oil_ratio = features[0] / (features[1] + 0.001)
-        temp_diff = features[4] - features[5]
-        pressure_total = features[2] + features[3] + features[1]
-        features = features + [rpm_oil_ratio, temp_diff, pressure_total]
+                row[feature] = defaults[feature]
 
-        if model is not None and scaler is not None:
-            features_array = np.array([features])
-            features_scaled = scaler.transform(features_array)
-            probability = float(model.predict_proba(features_scaled)[0][0])
-        else:
-            probability = _heuristic_probability(dict(zip(feature_order, features)))
+        features_df = engineer_features(pd.DataFrame([row]))
+        features_scaled = scaler.transform(features_df)
 
-        if probability > 0.7:
-            risk = "HIGH"
-            window = "1-3 days"
-        elif probability > 0.4:
-            risk = "MEDIUM"
-            window = "4-7 days"
-        else:
-            risk = "LOW"
-            window = "8+ days"
+        probability = float(model.predict_proba(features_scaled)[0][_FAILURE_COL])
+        risk = risk_level_for(probability)
 
-        return {
+        result = {
             "component": "Engine",
             "failureProbability": round(probability, 3),
             "riskLevel": risk,
-            "estimatedFailureWindow": window,
-            "confidence": round(min(0.95, probability + 0.1), 2),
             "message": f"Analysis complete. Risk level: {risk}",
             "model_status": MODEL_STATUS,
-            "input_features": dict(zip(feature_order, features)),
+            "input_features": row,
         }
+
+        if _explainer is not None:
+            try:
+                engineered_row = features_df.iloc[0].to_dict()
+                shap_values = _explainer.shap_values_for(features_scaled)
+                result["top_features"] = top_features(shap_values, engineered_row, top_n=3)
+            except Exception as exc:
+                # Explainability failing must never take down the prediction itself.
+                print(f"SHAP explanation failed: {exc}")
+
+        return result
 
     except Exception as exc:
         print(f"Prediction error: {exc}")
         return {
             "component": "Engine",
-            "failureProbability": 0.5,
-            "riskLevel": "UNKNOWN",
-            "estimatedFailureWindow": "Unknown",
-            "confidence": 0.5,
-            "message": f"Error in prediction: {str(exc)}",
+            "error": True,
+            "failureProbability": None,
+            "riskLevel": "ERROR",
+            "message": f"Prediction failed: {exc}",
             "model_status": "error",
             "input_features": sensor_data,
         }
-
-
-def _heuristic_probability(features: Dict[str, float]) -> float:
-    rpm = features["engine_rpm"]
-    oil_pressure = features["lub_oil_pressure"]
-    fuel_pressure = features["fuel_pressure"]
-    coolant_pressure = features["coolant_pressure"]
-    oil_temp = features["lub_oil_temp"]
-    coolant_temp = features["coolant_temp"]
-
-    score = 0.08
-    score += max(0, rpm - 2500) / 7000 * 0.18
-    score += max(0, 2.2 - oil_pressure) / 2.2 * 0.24
-    score += max(0, 2.4 - fuel_pressure) / 2.4 * 0.10
-    score += max(0, 1.3 - coolant_pressure) / 1.3 * 0.12
-    score += max(0, oil_temp - 90) / 70 * 0.16
-    score += max(0, coolant_temp - 85) / 65 * 0.18
-    score += ((rpm % 97) / 97) * 0.04
-    return round(max(0.03, min(0.92, score)), 3)

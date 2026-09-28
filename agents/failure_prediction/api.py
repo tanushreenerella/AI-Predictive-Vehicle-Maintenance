@@ -46,6 +46,7 @@ def chat(req: ChatRequest):
         "vehicle_label": req.vehicle_label,
         "failure_probability": req.state.get("failure_probability"),
         "risk_level": req.state.get("risk_level"),
+        "ml_result": req.state.get("ml_result"),
         "next_agent": "supervisor",
     }
     result = vehicle_graph.invoke(init_state, config={"recursion_limit": 5})
@@ -65,5 +66,6 @@ def chat(req: ChatRequest):
             "scheduling": result.get("scheduling"),
             "failure_probability": result.get("failure_probability"),
             "risk_level": result.get("risk_level"),
+            "ml_result": result.get("ml_result"),
         }
     }

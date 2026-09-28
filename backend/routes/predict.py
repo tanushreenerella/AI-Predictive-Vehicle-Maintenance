@@ -4,6 +4,8 @@ from typing import Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
 
+from agents.agentic_graph.ml_result_cache import set_cached_ml_result
+from agents.agentic_graph.state import build_ml_result
 from agents.failure_prediction.predict import predict_failure
 from backend.session import get_db
 from backend.models.vehicle import Vehicle
@@ -67,6 +69,10 @@ def predict(
             vehicle.ai_last_analyzed = datetime.utcnow()
             db.commit()
 
+            # Make the complete result (incl. SHAP top_features) available to
+            # a later /chat turn for this vehicle, via LangGraph state.
+            set_cached_ml_result(vehicle.id, sensor, build_ml_result(result))
+
     return result
 
 
@@ -95,5 +101,7 @@ def predict_flex(
             vehicle.ai_component = result.get("component")
             vehicle.ai_last_analyzed = datetime.utcnow()
             db.commit()
+
+            set_cached_ml_result(vehicle.id, sensor, build_ml_result(result))
 
     return result

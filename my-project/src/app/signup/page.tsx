@@ -39,7 +39,8 @@ export default function SignupPage() {
     }
 
     try {
-      const res = await fetch('https://ai-predictive-vehicle-maintenance-production.up.railway.app/auth/signup', {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
+      const res = await fetch(`${API_BASE}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

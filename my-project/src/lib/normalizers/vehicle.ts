@@ -9,6 +9,7 @@ type RawVehicle = {
   mileage?: number;
   fuel_level?: number;
   health?: number | null;
+  analyzed?: boolean;
   ai_risk_level?: string | null;
   risk_level?: string | null;
   ai_failure_probability?: number | null;
@@ -32,8 +33,11 @@ export function normalizeVehicle(v: RawVehicle) {
   };
 }
 export function normalizeDashboardVehicle(v: RawVehicle) {
-  const probability = v.ai_failure_probability ?? v.failure_probability;
-  const health = typeof v.health === "number"
+  const analyzed = v.analyzed ?? Boolean(v.ai_last_analyzed);
+  const probability = analyzed ? (v.ai_failure_probability ?? v.failure_probability) : null;
+  const health = !analyzed
+    ? null
+    : typeof v.health === "number"
     ? v.health
     : typeof probability === "number"
       ? Math.max(0, Math.round(100 - probability * 100))
@@ -50,6 +54,7 @@ export function normalizeDashboardVehicle(v: RawVehicle) {
     mileage: v.mileage ?? 0,
     fuelLevel: v.fuel_level ?? 0,
 
+    analyzed,
     health,
     status,
     riskLevel: v.ai_risk_level ?? null,

@@ -1,4 +1,10 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## ProactiveAI frontend
+
+The ProactiveAI dashboard is a [Next.js](https://nextjs.org) application for vehicle health monitoring and predictive-maintenance analysis.
+
+### Production model
+
+The production predictor is a Random Forest selected using failure-class F1 as the evaluation metric. Its reproducible held-out test metrics are: Accuracy **63.3%**, Failure Recall **71.4%**, and Failure F1 **59.0%**.
 
 ## Getting Started
 

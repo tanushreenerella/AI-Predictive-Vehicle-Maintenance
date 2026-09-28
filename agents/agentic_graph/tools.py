@@ -16,10 +16,15 @@ MAX_DIAGNOSTIC_QUESTIONS = 3
 def get_diagnostic_question(symptom: str, answers_so_far: List[Dict]) -> Dict:
     """Generate the next diagnostic question based on symptom and answers collected so far."""
     # Hard limit — never ask more than MAX_DIAGNOSTIC_QUESTIONS
-    if len(answers_so_far) >= MAX_DIAGNOSTIC_QUESTIONS:
+    if len(answers_so_far) >= 2:
         return {"question": "", "enough_context": True}
 
     n = len(answers_so_far)
+    fixed_questions = (
+        "When does this problem happen most often: during startup, idle, acceleration, or braking?",
+        "Where is the issue coming from—engine bay, wheels, or under the vehicle—and does it get louder with speed?",
+    )
+    return {"question": fixed_questions[n], "enough_context": False}
     prompt = f"""You are a vehicle diagnostic expert. Ask ONE short follow-up question.
 Symptom: {symptom}
 Answers so far ({n} of {MAX_DIAGNOSTIC_QUESTIONS}): {json.dumps(answers_so_far)}
@@ -44,11 +49,15 @@ def predict_engine_failure(sensor_data: Dict[str, Any]) -> Dict:
     try:
         return predict_failure(sensor_data)
     except Exception as e:
+        # predict_failure() already returns a clear error dict on its own
+        # failures instead of raising — this is only a last-resort guard.
+        # No fabricated probability/risk here, matching that same contract.
         return {
-            "error": str(e),
-            "failureProbability": 0.5,
-            "riskLevel": "UNKNOWN",
-            "component": "Engine"
+            "error": True,
+            "message": str(e),
+            "failureProbability": None,
+            "riskLevel": "ERROR",
+            "component": "Engine",
         }
 
 
@@ -75,14 +84,16 @@ Return ONLY valid JSON:
         match = re.search(r"\{.*\}", cleaned, re.DOTALL)
         return json.loads(match.group() if match else cleaned)
     except Exception:
-        return {
-            "likely_issue": "Requires inspection",
-            "recommended_service": "Full diagnostic inspection",
-            "urgency": risk_level or "MEDIUM",
-            "estimated_cost": "$80-$200",
-            "timeframe": "Within 3-5 days",
-            "reasoning": "Based on reported symptoms and sensor readings."
-        }
+     valid_urgencies = {"HIGH", "MEDIUM", "LOW"}
+    fallback_urgency = risk_level.upper() if isinstance(risk_level, str) and risk_level.upper() in valid_urgencies else "MEDIUM"
+    return {
+        "likely_issue": "Requires inspection",
+        "recommended_service": "Full diagnostic inspection",
+        "urgency": fallback_urgency,
+        "estimated_cost": "$80-$200",
+        "timeframe": "Within 3-5 days",
+        "reasoning": "Based on reported symptoms and sensor readings."
+    }
 
 
 @tool
