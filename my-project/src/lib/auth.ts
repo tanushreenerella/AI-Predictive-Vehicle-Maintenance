@@ -1,6 +1,6 @@
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://ai-predictive-vehicle-maintenance-qdst.onrender.com";
 
 export async function getCurrentUser() {
   const res = await fetchWithAuth(`${API_BASE}/auth/me`);

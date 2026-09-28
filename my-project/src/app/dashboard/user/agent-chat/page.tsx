@@ -5,7 +5,7 @@ import { Bot, Calendar, Clock, Send, Wrench, Zap, Activity, Stethoscope, BookOpe
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-qdst.onrender.com';
 
 type Recommendation = {
   likely_issue: string;

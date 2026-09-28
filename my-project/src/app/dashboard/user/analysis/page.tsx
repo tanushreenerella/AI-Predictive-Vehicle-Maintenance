@@ -6,7 +6,7 @@ import { analyzeapi } from "@/lib/analyzeapi";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { AlertTriangle, CheckCircle, Activity, ChevronRight } from "lucide-react";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://ai-predictive-vehicle-maintenance-production.up.railway.app";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://ai-predictive-vehicle-maintenance-qdst.onrender.com";
 
 type SensorData = {
   engine_rpm: string;

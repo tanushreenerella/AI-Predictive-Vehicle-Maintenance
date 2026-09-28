@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { Bot, Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-production.up.railway.app';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-qdst.onrender.com';
 
 const SERVICE_TYPES = [
   'General Checkup',
