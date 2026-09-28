@@ -1,13 +1,12 @@
+import logging
 from datetime import date, time
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from langchain_core.messages import AIMessage, HumanMessage
 from sqlalchemy.orm import Session
 
-from agents.agentic_graph.graph import MIN_DIAGNOSTIC_ANSWERS, vehicle_graph
-from agents.agentic_graph.tools import find_appointment_slots
 from agents.agentic_scheduling_agent import agentic_scheduling_agent
+from agents.chat_agent import run_turn
 from backend.auth.dependencies import get_current_user
 from backend.models.appointment import Appointment
 from backend.models.user import User
@@ -36,92 +35,6 @@ def _fresh_state(vehicle_label: str) -> Dict[str, Any]:
     }
 
 
-def _to_graph_input(state: Dict[str, Any], message: str, vehicle_label: str) -> Dict[str, Any]:
-    messages = []
-    for m in state.get("messages", []):
-        if isinstance(m, dict):
-            if m.get("type") == "human":
-                messages.append(HumanMessage(content=m["content"]))
-            elif m.get("type") == "ai":
-                messages.append(AIMessage(content=m["content"]))
-        elif isinstance(m, (HumanMessage, AIMessage)):
-            messages.append(m)
-    messages.append(HumanMessage(content=message))
-
-    return {
-        "messages": messages,
-        "phase": state.get("phase", "general"),
-        "symptom": state.get("symptom"),
-        "sensor_data": state.get("sensor_data"),
-        "diagnostic_answers": state.get("diagnostic_answers", []),
-        "issue_context": state.get("issue_context"),
-        "recommendation": state.get("recommendation"),
-        "scheduling": state.get("scheduling"),
-        "vehicle_label": vehicle_label,
-        "failure_probability": state.get("failure_probability"),
-        "risk_level": state.get("risk_level"),
-        "next_agent": state.get("next_agent", ""),
-    }
-
-
-def _serialize_state(result: Dict[str, Any]) -> Dict[str, Any]:
-    messages = []
-    for m in result.get("messages", []):
-        if isinstance(m, HumanMessage):
-            messages.append({"type": "human", "content": m.content})
-        elif isinstance(m, AIMessage):
-            messages.append({"type": "ai", "content": m.content})
-        elif isinstance(m, dict):
-            messages.append(m)
-    return {
-        "messages": messages,
-        "phase": result.get("phase", "general"),
-        "symptom": result.get("symptom"),
-        "sensor_data": result.get("sensor_data"),
-        "diagnostic_answers": result.get("diagnostic_answers", []),
-        "issue_context": result.get("issue_context"),
-        "recommendation": result.get("recommendation"),
-        "scheduling": result.get("scheduling"),
-        "vehicle_label": result.get("vehicle_label", ""),
-        "failure_probability": result.get("failure_probability"),
-        "risk_level": result.get("risk_level"),
-        "next_agent": result.get("next_agent", ""),
-    }
-
-
-def _infer_tool_calls(prev_state: Dict[str, Any], result: Dict[str, Any]) -> list:
-    """Determine which agents ran by comparing state before and after graph invoke."""
-    tool_calls = ["supervisor"]
-    if result.get("recommendation") and not prev_state.get("recommendation"):
-        tool_calls.append("generate_service_recommendation")
-    if result.get("scheduling") and not prev_state.get("scheduling"):
-        tool_calls.append("find_appointment_slots")
-    if len(result.get("diagnostic_answers", [])) > len(prev_state.get("diagnostic_answers", [])):
-        tool_calls.append("diagnostic_questions_tool")
-    if result.get("failure_probability") is not None and prev_state.get("failure_probability") is None:
-        tool_calls.append("predict_engine_failure")
-    return tool_calls
-
-
-def _diagnostic_answer_count(state: Dict[str, Any]) -> int:
-    answers = state.get("diagnostic_answers", [])
-    return len(answers) if isinstance(answers, list) else 0
-
-
-def _diagnostic_follow_up(state: Dict[str, Any]) -> str:
-    count = _diagnostic_answer_count(state)
-    questions = [
-        "When does the knocking noise happen most often: during startup, idle, acceleration, or braking?",
-        "Is the noise coming from the engine bay, wheels, or under the vehicle? Also, does it get louder with speed?",
-    ]
-    return questions[min(count, len(questions) - 1)]
-
-
-def _is_booking_request(message: str) -> bool:
-    msg = (message or "").lower()
-    return any(word in msg for word in ["book", "schedule", "appointment", "service"])
-
-
 @router.post("/chat")
 @router.post("/agent/chat")
 def chat(
@@ -134,107 +47,16 @@ def chat(
     state_key = _state_key(user.id, vehicle.id if vehicle else "none", payload.get("session_id"))
     state = payload.get("state") or _CONVERSATIONS.get(state_key) or _fresh_state(_vehicle_label(vehicle))
 
-    # A health-status request is informational. It must not consume a
-    # diagnostic answer or advance the user into a recommendation flow.
-    if _is_vehicle_health_request(message):
-        _CONVERSATIONS[state_key] = state
-        return {
-            "reply": _vehicle_health_reply(vehicle),
-            "step": "vehicle_health",
-            "phase": state.get("phase", "general"),
-            "state": state,
-            "recommendation": state.get("recommendation"),
-            "scheduling": state.get("scheduling"),
-            "appointment": None,
-            "tool_calls": ["vehicle_health"],
-        }
-
-    # Scheduling intent — user said yes to a recommendation, find a slot
-    if _is_scheduling_intent(message, state):
-        slots = find_appointment_slots.invoke({
-            "urgency": (state.get("recommendation") or {}).get("urgency", "MEDIUM"),
-            "user_preference": message,
-        })
-        slot = slots.get("selected_slot", {})
-        reply = f"I found a slot on {slot.get('date', 'TBD')} at {slot.get('time', '10:00')}. Reply 'confirm' to book it."
-        state["scheduling"] = slots
-        state["phase"] = "scheduling"
-        _CONVERSATIONS[state_key] = state
-        return {
-            "reply": reply,
-            "step": "scheduling",
-            "phase": "scheduling",
-            "state": state,
-            "recommendation": state.get("recommendation"),
-            "scheduling": slots,
-            "appointment": None,
-            "tool_calls": ["supervisor", "find_appointment_slots"],
-        }
-
-    # Booking confirmation is handled outside the graph (requires DB access)
-    if _is_booking_confirmation(message, state):
-        appointment_data = _create_appointment_from_state(db, user, vehicle, state)
-        state["phase"] = "confirmed"
-        _CONVERSATIONS[state_key] = state
-        return {
-            "reply": (
-                f"Done. I've booked {appointment_data['service_type']} for "
-                f"{appointment_data['vehicle']} on {appointment_data['date']} at {appointment_data['time']}."
-            ),
-            "step": "booking_confirmation",
-            "phase": "confirmed",
-            "state": state,
-            "recommendation": state.get("recommendation"),
-            "scheduling": state.get("scheduling"),
-            "appointment": appointment_data,
-            "tool_calls": ["supervisor", "agentic_scheduling_agent"],
-        }
-
     try:
-        graph_input = _to_graph_input(state, message, _vehicle_label(vehicle))
-        result = vehicle_graph.invoke(graph_input)
-
-        ai_messages = [m for m in result.get("messages", []) if isinstance(m, AIMessage)]
-        reply = ai_messages[-1].content if ai_messages else "I'm here to help. Could you describe your vehicle's issue?"
-
-        tool_calls = _infer_tool_calls(state, result)
-        serialized = _serialize_state(result)
-
-        if (
-            not _is_booking_request(message)
-            and (serialized.get("recommendation") or serialized.get("scheduling"))
-            and _diagnostic_answer_count(serialized) < MIN_DIAGNOSTIC_ANSWERS
-        ):
-            serialized["phase"] = "diagnosing"
-            serialized["recommendation"] = None
-            serialized["scheduling"] = None
-            serialized["issue_context"] = None
-            _CONVERSATIONS[state_key] = serialized
-            return {
-                "reply": _diagnostic_follow_up(serialized),
-                "step": "diagnosing",
-                "phase": "diagnosing",
-                "state": serialized,
-                "recommendation": None,
-                "scheduling": None,
-                "appointment": None,
-                "tool_calls": ["supervisor", "diagnostic_questions_tool"],
-            }
-
-        _CONVERSATIONS[state_key] = serialized
-
-        return {
-            "reply": reply,
-            "step": result.get("phase", "general"),
-            "phase": result.get("phase", "general"),
-            "state": serialized,
-            "recommendation": result.get("recommendation"),
-            "scheduling": result.get("scheduling"),
-            "appointment": None,
-            "tool_calls": tool_calls,
-        }
-
+        result = run_turn(
+            state, message, _vehicle_label(vehicle), _vehicle_state(vehicle),
+            book_fn=lambda rec, sched: _create_appointment_from_state(
+                db, user, vehicle, {"recommendation": rec, "scheduling": sched}),
+        )
+        _CONVERSATIONS[state_key] = result["state"]
+        return result
     except Exception:
+        logging.exception("agent turn failed")
         return {
             "reply": "I'm having trouble processing that right now. Please try again.",
             "step": "error",
@@ -293,8 +115,7 @@ def schedule_agentic(
 
 
 def _resolve_vehicle(db: Session, user: User, vehicle_id: Optional[str]) -> Optional[Vehicle]:
-    query = db.query(Vehicle).filter(Vehicle.user_id == user.id)
-    vehicles = query.all()
+    vehicles = db.query(Vehicle).filter(Vehicle.user_id == user.id).all()
     if vehicle_id:
         selected = next((v for v in vehicles if str(v.id) == str(vehicle_id)), None)
         if selected:
@@ -307,7 +128,11 @@ def _resolve_vehicle(db: Session, user: User, vehicle_id: Optional[str]) -> Opti
 def _vehicle_state(vehicle: Optional[Vehicle]) -> Dict[str, Any]:
     if not vehicle:
         return {}
+    if vehicle.ai_last_analyzed is None:
+        return {"analyzed": False, "risk_level": None, "failure_probability": None,
+                "component": None, "last_analyzed": None}
     return {
+        "analyzed": True,
         "risk_level": vehicle.ai_risk_level,
         "failure_probability": vehicle.ai_failure_probability,
         "component": vehicle.ai_component,
@@ -324,44 +149,6 @@ def _vehicle_label(vehicle: Optional[Vehicle]) -> str:
 
 def _state_key(user_id: str, vehicle_id: str, session_id: Optional[str]) -> str:
     return f"{user_id}:{vehicle_id}:{session_id or 'default'}"
-
-
-def _is_scheduling_intent(message: str, state: Dict[str, Any]) -> bool:
-    msg = (message or "").lower()
-    return (
-        state.get("recommendation") is not None
-        and state.get("scheduling") is None
-        and state.get("phase") in ("awaiting_booking", "recommended", "general")
-        and any(w in msg for w in ["yes", "ok", "okay", "sure", "book", "schedule", "please", "go ahead", "yep", "yeah"])
-    )
-
-
-def _is_booking_confirmation(message: str, state: Dict[str, Any]) -> bool:
-    msg = (message or "").lower()
-    return (
-        state.get("phase") == "scheduling"
-        and bool((state.get("scheduling") or {}).get("selected_slot"))
-        # A bare affirmation is not a booking instruction. This prevents an
-        # accidental appointment when a user merely acknowledges a proposed
-        # time. "Yes, find a slot" is handled above as scheduling intent.
-        and any(token in msg for token in ["confirm", "book it", "please book it"])
-    )
-
-
-def _is_vehicle_health_request(message: str) -> bool:
-    msg = (message or "").lower()
-    return "health" in msg and any(token in msg for token in ["show", "status", "my vehicle", "vehicle health"])
-
-
-def _vehicle_health_reply(vehicle: Optional[Vehicle]) -> str:
-    if not vehicle:
-        return "I couldn't find a vehicle on your account yet. Add one to begin health monitoring."
-    if vehicle.ai_last_analyzed is None:
-        return f"{_vehicle_label(vehicle)} has not been analyzed yet. Run AI Analysis to get its health status."
-    probability = vehicle.ai_failure_probability
-    probability_text = f"{probability * 100:.0f}%" if isinstance(probability, (int, float)) else "unavailable"
-    risk = vehicle.ai_risk_level or "unavailable"
-    return f"{_vehicle_label(vehicle)} is currently {risk} risk with a {probability_text} predicted failure probability."
 
 
 def _proposed_slot(state: Any) -> Optional[Dict[str, Any]]:
