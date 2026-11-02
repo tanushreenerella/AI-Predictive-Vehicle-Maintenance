@@ -67,6 +67,14 @@ const PROMPTS = [
   { icon: BookOpen, label: 'Next maintenance', text: 'When is my next maintenance due?' },
 ];
 
+const TOOL_LABELS: Record<string, string> = {
+  get_vehicle_health: 'Checked vehicle health',
+  log_diagnostic_question: 'Asked a diagnostic question',
+  recommend_service: 'Generated a service recommendation',
+  propose_appointment_slot: 'Looked for an appointment slot',
+  book_appointment: 'Booked the appointment',
+};
+
 function now() {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -208,6 +216,13 @@ export default function AgentChatPage() {
         ? 'border-yellow-500/40 bg-yellow-500/5 text-yellow-200'
         : 'border-green-500/40 bg-green-500/5 text-green-200';
 
+  const urgencyBadgeColor = (urgency?: string) =>
+    urgency === 'HIGH'
+      ? 'bg-red-500/15 border-red-500/40 text-red-300'
+      : urgency === 'MEDIUM'
+        ? 'bg-yellow-500/15 border-yellow-500/40 text-yellow-200'
+        : 'bg-green-500/15 border-green-500/40 text-green-200';
+
   const hasConversation = messages.length > 1;
 
   return (
@@ -327,27 +342,38 @@ export default function AgentChatPage() {
                   {message.tool_calls.map((tool, i) => (
                     <span key={i} className="flex items-center gap-1 text-xs px-2 py-0.5 bg-gray-800/60 border border-gray-700/40 rounded-full text-gray-500">
                       <span className="w-1 h-1 rounded-full bg-blue-500 shrink-0" />
-                      {tool}
+                      {TOOL_LABELS[tool] ?? tool}
                     </span>
                   ))}
                 </div>
               )}
 
               {message.recommendation && !message.appointment && (
-                <div className={`max-w-[82%] rounded-xl border p-4 space-y-2.5 text-sm ${urgencyColor(message.recommendation.urgency)}`}>
-                  <div className="flex items-center gap-2 font-semibold">
+                <div className="max-w-[82%] rounded-xl border border-gray-700/60 bg-gray-800/80 p-4 space-y-3 text-sm text-gray-100">
+                  <div className="flex items-center gap-2">
                     <Wrench className="w-4 h-4" />
-                    Service Recommendation
-                    <span className="ml-auto text-xs font-normal px-2 py-0.5 rounded-full bg-black/20 border border-current/20">
+                    <span className="font-semibold">Diagnosis</span>
+                    <span className={`ml-auto rounded-full border px-2 py-0.5 text-xs font-medium ${urgencyBadgeColor(message.recommendation.urgency)}`}>
                       {message.recommendation.urgency}
                     </span>
                   </div>
-                  <div className="grid gap-1.5 text-sm">
-                    <p><span className="text-gray-400">Issue:</span> {message.recommendation.likely_issue}</p>
-                    <p><span className="text-gray-400">Service:</span> {message.recommendation.recommended_service}</p>
-                    <p><span className="text-gray-400">Cost:</span> {message.recommendation.estimated_cost}</p>
-                    <p><span className="text-gray-400">Timeframe:</span> {message.recommendation.timeframe}</p>
+                  <div className="space-y-1.5">
+                    <p><span className="text-gray-400">Probable cause:</span> {message.recommendation.likely_issue}</p>
+                    <p><span className="text-gray-400">Recommended service:</span> {message.recommendation.recommended_service}</p>
+                    {message.recommendation.estimated_cost && (
+                      <p><span className="text-gray-400">Cost range:</span> {message.recommendation.estimated_cost}</p>
+                    )}
+                    {message.recommendation.timeframe && (
+                      <p><span className="text-gray-400">Timeframe:</span> {message.recommendation.timeframe}</p>
+                    )}
                   </div>
+                  <button
+                    onClick={() => void sendMessageWithText('yes, find a slot')}
+                    disabled={loading}
+                    className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Book service
+                  </button>
                 </div>
               )}
 

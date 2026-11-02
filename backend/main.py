@@ -22,12 +22,15 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 app = FastAPI(title="Predictive Maintenance API")
 
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "https://ai-predictive-vehicle-maintenance.vercel.app",
+]
+_ORIGIN_RE = re.compile("|".join(re.escape(o) for o in ALLOWED_ORIGINS))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://ai-predictive-vehicle-maintenance.vercel.app",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
