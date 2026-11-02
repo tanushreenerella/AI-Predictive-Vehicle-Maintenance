@@ -2,7 +2,7 @@ import logging
 from datetime import date, time
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from agents.agentic_scheduling_agent import agentic_scheduling_agent
@@ -11,6 +11,7 @@ from backend.auth.dependencies import get_current_user
 from backend.models.appointment import Appointment
 from backend.models.user import User
 from backend.models.vehicle import Vehicle
+from backend.rate_limit import EXPENSIVE_LIMIT, limiter
 from backend.session import get_db
 
 router = APIRouter(tags=["Agent Chat"])
@@ -39,7 +40,8 @@ def _fresh_state(vehicle_label: str, language: str = "English") -> Dict[str, Any
 
 @router.post("/chat")
 @router.post("/agent/chat")
-def chat(payload: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+@limiter.limit(EXPENSIVE_LIMIT)  # one bucket shared by both paths: they are the same endpoint
+def chat(request: Request, payload: dict, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     message = payload.get("message", "")
     vehicle = _resolve_vehicle(db, user, payload.get("vehicle_id"))
     state_key = _state_key(user.id, vehicle.id if vehicle else "none", payload.get("session_id"))

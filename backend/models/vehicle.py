@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Float
+from sqlalchemy import Column, String, Integer, DateTime, Float, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from uuid import uuid4
@@ -10,7 +10,7 @@ class Vehicle(Base):
     __tablename__ = "vehicles"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    user_id = Column(String, nullable=False)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
 
     name = Column(String, nullable=False)
     model = Column(String, nullable=False)

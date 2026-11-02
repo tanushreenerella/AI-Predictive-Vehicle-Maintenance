@@ -7,12 +7,14 @@ from pathlib import Path
 # load_dotenv() does not override variables that are already set.
 _DB_PATH = Path(tempfile.mkdtemp(prefix="proactiveai-tests-")) / "test.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_DB_PATH.as_posix()}"
+os.environ["JWT_SECRET_KEY"] = "test-only-jwt-secret-not-for-production"
 
 import pytest
 from fastapi.testclient import TestClient
 
 from backend.base import Base
 from backend.main import ALLOWED_ORIGINS, app
+from backend.rate_limit import limiter
 from backend.session import engine
 
 ORIGIN = ALLOWED_ORIGINS[0]
@@ -22,6 +24,14 @@ ORIGIN = ALLOWED_ORIGINS[0]
 def fresh_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    yield
+
+
+@pytest.fixture(autouse=True)
+def fresh_rate_limits():
+    # Limits are in-memory and every TestClient shares one IP, so without a
+    # reset, requests from earlier tests would count against later ones.
+    limiter.reset()
     yield
 
 
@@ -37,3 +47,19 @@ def signup(client: TestClient, email: str) -> dict:
     res = client.post("/auth/signup", json={"email": email, "password": "test-password"})
     assert res.status_code == 200, res.text
     return {"Authorization": f"Bearer {res.json()['access_token']}"}
+
+
+def user_id(client: TestClient, headers: dict) -> str:
+    res = client.get("/auth/me", headers=headers)
+    assert res.status_code == 200, res.text
+    return res.json()["id"]
+
+
+def add_vehicle(client: TestClient, headers: dict, name: str = "Car") -> str:
+    res = client.post(
+        "/vehicles",
+        json={"name": name, "model": "M", "year": 2020, "registration_number": f"{name}-1"},
+        headers=headers,
+    )
+    assert res.status_code == 200, res.text
+    return res.json()["id"]

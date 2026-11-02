@@ -20,6 +20,11 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+# Plain postgresql:// makes SQLAlchemy load psycopg2, but requirements.txt
+# installs psycopg (v3), so name that driver explicitly.
+if DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
+
 # pool_pre_ping: Neon suspends idle compute and closes idle connections,
 # so verify pooled connections before use instead of failing on a stale one.
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)

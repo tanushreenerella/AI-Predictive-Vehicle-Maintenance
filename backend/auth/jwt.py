@@ -1,7 +1,20 @@
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
-SECRET_KEY = "SUPER_SECRET_KEY_CHANGE_ME"
+# Load the root .env (one level above backend/) regardless of the working directory.
+load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
+
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "JWT_SECRET_KEY is not set. Add it to the .env file in the project root "
+        "(see .env.example), e.g. the output of: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+    )
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 7
 

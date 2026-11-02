@@ -2,8 +2,6 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from typing import List
-
 from backend.session import get_db
 from backend.models.vehicle import Vehicle
 from backend.auth.dependencies import get_current_user
@@ -11,20 +9,6 @@ from backend.models.user import User
 from agents.failure_prediction.predict import predict_failure
 from backend.services.vehicle_analysis import apply_vehicle_analysis
 router = APIRouter(prefix="/vehicles", tags=["Vehicles"])
-
-
-class VehicleCreate(BaseModel):
-    user_id: str
-    name: str
-    model: str
-    year: int
-    registration_number: str
-    mileage: int = 0
-    fuel_level: int = 100
-
-
-class VehicleResponse(VehicleCreate):
-    id: str
 
 
 class SensorData(BaseModel):
@@ -35,19 +19,6 @@ class SensorData(BaseModel):
     lub_oil_temp: float
     coolant_temp: float
 
-
-@router.post("", response_model=VehicleResponse)
-def add_vehicle(vehicle: VehicleCreate, db: Session = Depends(get_db)):
-    db_vehicle = Vehicle(**vehicle.dict())
-    db.add(db_vehicle)
-    db.commit()
-    db.refresh(db_vehicle)
-    return db_vehicle
-
-
-@router.get("/{user_id}", response_model=List[VehicleResponse])
-def get_user_vehicles(user_id: str, db: Session = Depends(get_db)):
-    return db.query(Vehicle).filter(Vehicle.user_id == user_id).all()
 
 @router.post("/run/{vehicle_id}")
 def run_analysis(

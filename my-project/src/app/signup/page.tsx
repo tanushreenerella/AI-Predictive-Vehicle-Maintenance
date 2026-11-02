@@ -52,7 +52,11 @@ export default function SignupPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setErrors([err.detail || 'Registration failed. Please try again.']);
+        // A 422 validation error's detail is a list of {msg, ...} objects, not a string.
+        const detail = Array.isArray(err.detail)
+          ? err.detail.map((d: { msg?: string }) => d.msg ?? 'Invalid input')
+          : [err.detail || 'Registration failed. Please try again.'];
+        setErrors(detail);
         return;
       }
 

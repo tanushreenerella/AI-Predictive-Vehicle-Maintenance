@@ -37,7 +37,11 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setErrors([err.detail || 'Invalid email or password.']);
+        // A 422 validation error's detail is a list of {msg, ...} objects, not a string.
+        const detail = Array.isArray(err.detail)
+          ? err.detail.map((d: { msg?: string }) => d.msg ?? 'Invalid input')
+          : [err.detail || 'Invalid email or password.'];
+        setErrors(detail);
         return;
       }
 

@@ -85,9 +85,3 @@ def get_alerts_me(
 ):
     vehicles = db.query(Vehicle).filter(Vehicle.user_id == user.id).all()
     return _build_alerts(vehicles)
-
-
-@router.get("/{user_id}")
-def get_alerts(user_id: str, db: Session = Depends(get_db)):
-    vehicles = db.query(Vehicle).filter(Vehicle.user_id == user_id).all()
-    return _build_alerts(vehicles)

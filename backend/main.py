@@ -2,6 +2,9 @@ import re
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+
+from backend.rate_limit import limiter
 
 from backend.routes.vehicles import router as vehicle_router
 from backend.routes.analysis import router as analysis_router
@@ -21,6 +24,7 @@ Base.metadata.create_all(bind=engine)
 import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
 app = FastAPI(title="Predictive Maintenance API")
+app.state.limiter = limiter
 
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
@@ -48,6 +52,14 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         status_code=exc.status_code,
         content={"detail": exc.detail},
         headers=_cors_headers(request),
+    )
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": f"Too many requests: limit is {exc.detail}. Please wait and try again."},
+        headers={**_cors_headers(request), "Retry-After": "60"},
     )
 
 @app.exception_handler(Exception)
