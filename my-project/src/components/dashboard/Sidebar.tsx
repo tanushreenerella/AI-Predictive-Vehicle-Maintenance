@@ -75,7 +75,7 @@ const handleLogout = async () => {
               <h2 className="text-xl font-bold bg-linear-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
                 ProactiveAI
               </h2>
-              <p className="text-xs text-gray-500">{user?.role === 'admin' ? 'Admin Panel' : 'User Panel'}</p>
+              <p className="text-xs text-gray-500">User Panel</p>
             </div>
           )}
         </div>
@@ -96,7 +96,7 @@ const handleLogout = async () => {
               </p>
               <p className="text-xs text-gray-500 truncate">{user?.email}</p>
               <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-blue-500/15 text-blue-400 rounded-full border border-blue-500/20">
-                {user?.role === 'admin' ? 'Administrator' : 'Vehicle Owner'}
+                Vehicle Owner
               </span>
             </div>
           )}

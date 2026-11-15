@@ -8,12 +8,12 @@ export default function AnalyzePage() {
   const [result, setResult] = useState<any>(null);
 
   const [sensorData, setSensorData] = useState({
-    engine_rpm: 3000,
-    lub_oil_pressure: 2.0,
-    fuel_pressure: 2.5,
-    coolant_pressure: 1.2,
-    lub_oil_temp: 90,
-    coolant_temp: 85
+    engine_rpm: 746,
+    lub_oil_pressure: 3.16,
+    fuel_pressure: 6.2,
+    coolant_pressure: 2.17,
+    lub_oil_temp: 76.8,
+    coolant_temp: 78.4
   });
 
   const handleAnalyze = async () => {

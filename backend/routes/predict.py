@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel
+from backend.sensors import PredictRequest
 from typing import Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -27,37 +27,13 @@ def _optional_user(request: Request, db: Session = Depends(get_db)) -> Optional[
         return None
 
 
-class SensorData(BaseModel):
-    engine_rpm: float
-    lub_oil_pressure: float
-    fuel_pressure: float
-    coolant_pressure: float
-    lub_oil_temp: float
-    coolant_temp: float
-    vehicle_id: Optional[str] = None
 
-
-class FlexibleSensorData(BaseModel):
-    engine_rpm: Optional[float] = None
-    lub_oil_pressure: Optional[float] = None
-    fuel_pressure: Optional[float] = None
-    coolant_pressure: Optional[float] = None
-    lub_oil_temp: Optional[float] = None
-    coolant_temp: Optional[float] = None
-    vehicle_id: Optional[str] = None
-
-
-@router.post("/predict")
-def predict(
-    data: SensorData,
-    db: Session = Depends(get_db),
-    user: Optional[User] = Depends(_optional_user),
-):
-    sensor = data.dict(exclude={"vehicle_id"})
+def _predict_and_save(data: PredictRequest, db: Session, user: Optional[User]) -> dict:
+    sensor = data.model_dump(exclude={"vehicle_id"})
     result = predict_failure(sensor)
 
     # Save result to vehicle if vehicle_id provided and user authenticated
-    if data.vehicle_id and user:
+    if data.vehicle_id and user and not result.get("error"):
         vehicle = db.query(Vehicle).filter(
             Vehicle.id == data.vehicle_id,
             Vehicle.user_id == user.id,
@@ -76,32 +52,21 @@ def predict(
     return result
 
 
-@router.post("/predict_flex")
-def predict_flex(
-    data: FlexibleSensorData,
+@router.post("/predict")
+def predict(
+    data: PredictRequest,
     db: Session = Depends(get_db),
     user: Optional[User] = Depends(_optional_user),
 ):
-    defaults = {
-        "engine_rpm": 3000.0, "lub_oil_pressure": 2.0,
-        "fuel_pressure": 2.5, "coolant_pressure": 1.2,
-        "lub_oil_temp": 90.0, "coolant_temp": 85.0,
-    }
-    sensor = {**defaults, **data.dict(exclude_none=True, exclude={"vehicle_id"})}
-    result = predict_failure(sensor)
+    return _predict_and_save(data, db, user)
 
-    if data.vehicle_id and user:
-        vehicle = db.query(Vehicle).filter(
-            Vehicle.id == data.vehicle_id,
-            Vehicle.user_id == user.id,
-        ).first()
-        if vehicle:
-            vehicle.ai_risk_level = result["riskLevel"]
-            vehicle.ai_failure_probability = result["failureProbability"]
-            vehicle.ai_component = result.get("component")
-            vehicle.ai_last_analyzed = datetime.utcnow()
-            db.commit()
 
-            set_cached_ml_result(vehicle.id, sensor, build_ml_result(result))
-
-    return result
+@router.post("/predict_flex")
+def predict_flex(
+    data: PredictRequest,
+    db: Session = Depends(get_db),
+    user: Optional[User] = Depends(_optional_user),
+):
+    # Kept for existing callers. It used to fill missing sensors with
+    # defaults; it now requires all six, exactly like /predict.
+    return _predict_and_save(data, db, user)

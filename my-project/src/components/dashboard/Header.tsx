@@ -153,7 +153,7 @@ export default function Header({ user, onMenuClick }: HeaderProps) {
                 <div className="hidden md:block text-left">
                   <p className="text-sm font-medium">{user?.name || 'User'}</p>
                   <p className="text-xs text-gray-400">
-                    {user?.userType === 'admin' ? 'Administrator' : 'Vehicle Owner'}
+                    Vehicle Owner
                   </p>
                 </div>
                 <ChevronDown className="w-4 h-4 hidden md:block" />

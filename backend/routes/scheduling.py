@@ -1,4 +1,7 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from datetime import date, time
 from fastapi.responses import StreamingResponse
@@ -12,6 +15,7 @@ from backend.models.vehicle import Vehicle
 from backend.models.appointment import Appointment
 from backend.models.user import User
 from backend.auth.dependencies import get_current_user
+from backend.services.availability import InvalidSlot, SlotUnavailable, book_slot, move_slot, to_http
 
 from agents.agentic_scheduling_agent import agentic_scheduling_agent
 from agents.reschedule_warning_agent import reschedule_warning_agent
@@ -84,14 +88,27 @@ def get_schedule_suggestion(
 # -------------------------------------------------
 # CREATE APPOINTMENT
 # -------------------------------------------------
+class BookingRequest(BaseModel):
+    vehicle_id: str
+    service_type: str = Field(min_length=1)
+    appointment_date: date
+    appointment_time: time
+    urgency: Literal["HIGH", "MEDIUM", "LOW"]
+
+
+class RescheduleRequest(BaseModel):
+    appointment_date: date
+    appointment_time: time
+
+
 @router.post("")
 def create_appointment(
-    payload: dict,
+    payload: BookingRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     vehicle = db.query(Vehicle).filter(
-        Vehicle.id == payload.get("vehicle_id"),
+        Vehicle.id == payload.vehicle_id,
         Vehicle.user_id == user.id
     ).first()
 
@@ -99,20 +116,17 @@ def create_appointment(
         raise HTTPException(status_code=404, detail="Vehicle not found")
 
     try:
-        appointment = Appointment(
+        appointment = book_slot(
+            db,
             user_id=user.id,
             vehicle_id=vehicle.id,
-            service_type=payload["service_type"],
-            appointment_date=date.fromisoformat(payload["appointment_date"]),
-            appointment_time=time.fromisoformat(payload["appointment_time"]),
-            urgency=payload["urgency"],
+            service_type=payload.service_type,
+            urgency=payload.urgency,
+            day=payload.appointment_date,
+            start=payload.appointment_time,
         )
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid appointment data")
-
-    db.add(appointment)
-    db.commit()
-    db.refresh(appointment)
+    except (InvalidSlot, SlotUnavailable) as exc:
+        raise to_http(exc)
 
     return {
         "status": appointment.status,
@@ -120,6 +134,7 @@ def create_appointment(
         "vehicle": vehicle.name,
         "date": appointment.appointment_date,
         "time": appointment.appointment_time,
+        "bay": appointment.bay,
         "urgency": appointment.urgency,
     }
 
@@ -199,7 +214,7 @@ def cancel_appointment(
 @router.patch("/{appointment_id}")
 def reschedule_appointment(
     appointment_id: str,
-    payload: dict,
+    payload: RescheduleRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -212,19 +227,16 @@ def reschedule_appointment(
         raise HTTPException(status_code=404, detail="Appointment not found")
 
     try:
-        appointment.appointment_date = date.fromisoformat(payload["appointment_date"])
-        appointment.appointment_time = time.fromisoformat(payload["appointment_time"])
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid date or time")
-
-    db.commit()
-    db.refresh(appointment)
+        move_slot(db, appointment, payload.appointment_date, payload.appointment_time)
+    except (InvalidSlot, SlotUnavailable) as exc:
+        raise to_http(exc)
 
     return {
         "status": "rescheduled",
         "appointment_id": appointment.id,
         "new_date": appointment.appointment_date,
         "new_time": appointment.appointment_time,
+        "bay": appointment.bay,
     }
 
 

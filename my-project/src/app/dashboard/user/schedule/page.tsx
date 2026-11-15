@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiErrorMessage } from '@/lib/apiError';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { Bot, Calendar, CheckCircle, AlertTriangle } from 'lucide-react';
 
@@ -109,7 +110,11 @@ export default function ScheduleAppointmentPage() {
           urgency: suggestion?.urgency ?? 'MEDIUM',
         }),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        // e.g. 409 slot fully booked, 422 Sunday / past / off the hour
+        alert(await apiErrorMessage(res, 'Failed to schedule appointment. Please try again.'));
+        return;
+      }
       setSuccess(true);
     } catch {
       alert('Failed to schedule appointment. Please try again.');
@@ -288,9 +293,13 @@ export default function ScheduleAppointmentPage() {
               <input
                 type="time"
                 value={apptTime}
+                min="09:00"
+                max="17:00"
+                step={3600}
                 onChange={e => setApptTime(e.target.value)}
                 className="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <p className="mt-1 text-xs text-gray-500">Mon–Sat, on the hour, 09:00–17:00</p>
             </div>
           </div>
 

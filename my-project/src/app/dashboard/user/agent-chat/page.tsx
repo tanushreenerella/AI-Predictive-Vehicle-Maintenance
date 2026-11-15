@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Bot, Calendar, Clock, Send, Wrench, Zap, Activity, Stethoscope, BookOpen, ChevronDown, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { apiErrorMessage } from '@/lib/apiError';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://ai-predictive-vehicle-maintenance-qdst.onrender.com';
@@ -44,6 +45,7 @@ type ChatResponse = {
   recommendation?: Recommendation | null;
   scheduling?: Scheduling | null;
   appointment?: Appointment | null;
+  confirm_required?: boolean;
   tool_calls?: string[];
 };
 
@@ -54,8 +56,11 @@ type Message = {
   recommendation?: Recommendation | null;
   scheduling?: Scheduling | null;
   appointment?: Appointment | null;
+  confirm_required?: boolean;
   tool_calls?: string[];
 };
+
+const MAX_MESSAGE_LENGTH = 1000;
 
 type ChatLanguage = 'English' | 'Hindi' | 'Hinglish';
 
@@ -140,7 +145,7 @@ export default function AgentChatPage() {
     }
   }, [messages, loading]);
 
-  async function sendMessageWithText(text: string) {
+  async function sendMessageWithText(text: string, confirmBooking = false) {
     if (!text.trim() || loading) return;
 
     setMessages((prev) => [...prev, { role: 'user', text, ts: now() }]);
@@ -155,8 +160,16 @@ export default function AgentChatPage() {
           vehicle_id: selectedVehicleId || undefined,
           session_id: sessionIdRef.current,
           language,
+          // Only the Confirm booking button sets this; the backend books only then.
+          confirm_booking: confirmBooking,
         }),
       });
+
+      if (!res.ok) {
+        const errorText = await apiErrorMessage(res, 'Sorry, something went wrong. Please try again.');
+        setMessages((prev) => [...prev, { role: 'agent', text: errorText, ts: now() }]);
+        return;
+      }
 
       const data: ChatResponse = await res.json();
 
@@ -169,6 +182,7 @@ export default function AgentChatPage() {
           recommendation: data.recommendation ?? null,
           scheduling: data.scheduling ?? null,
           appointment: data.appointment ?? null,
+          confirm_required: data.confirm_required ?? false,
           tool_calls: data.tool_calls?.length ? data.tool_calls : undefined,
         },
       ]);
@@ -391,6 +405,21 @@ export default function AgentChatPage() {
                     )}
                     <p className="text-gray-500 text-xs">{message.scheduling.reason}</p>
                   </div>
+                  {/* Only the newest card: the backend books the slot it currently has on record. */}
+                  {message.scheduling.selected_slot && index === messages.length - 1 && (
+                    <div className="space-y-1.5 pt-1">
+                      {message.confirm_required && (
+                        <p className="text-xs text-yellow-200">Press Confirm booking to book this slot.</p>
+                      )}
+                      <button
+                        onClick={() => void sendMessageWithText('Confirm booking', true)}
+                        disabled={loading}
+                        className="rounded-lg bg-blue-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Confirm booking
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -431,6 +460,7 @@ export default function AgentChatPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+              maxLength={MAX_MESSAGE_LENGTH}
               placeholder="Ask about a symptom, answer a question, or confirm a booking..."
               className="flex-1 bg-gray-800/60 border border-gray-700/60 rounded-xl px-4 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition"
             />

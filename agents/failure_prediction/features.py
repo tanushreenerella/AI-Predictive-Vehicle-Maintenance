@@ -26,6 +26,18 @@ BASE_FEATURE_COLUMNS = [
     "coolant_temp",
 ]
 
+# (min, max) of each sensor in the training split train.py fits on
+# (data/raw/engine_data.csv, coolant_temp < 150, stratified 80/20, seed 42).
+# The model has never seen values outside these, so the API rejects them.
+SENSOR_RANGES = {
+    "engine_rpm": (77.0, 2239.0),
+    "lub_oil_pressure": (0.003384113, 7.265565536),
+    "fuel_pressure": (0.003187131, 21.13832551),
+    "coolant_pressure": (0.002482733, 7.478504946),
+    "lub_oil_temp": (71.32197369, 89.58079551),
+    "coolant_temp": (61.67332472, 118.371957),
+}
+
 ENGINEERED_FEATURE_COLUMNS = [
     "rpm_oil_ratio",
     "temp_diff",

@@ -4,11 +4,8 @@ import sys
 from pathlib import Path
 
 import pytest
-from fastapi import Depends, FastAPI
-from fastapi.testclient import TestClient
 from jose import jwt
 
-from backend.auth.dependencies import require_admin
 from backend.models.user import User
 from backend.routes import analyze_route
 from backend.session import SessionLocal
@@ -202,43 +199,3 @@ def test_analyze_allows_owner(client, fake_orchestrator):
     assert res.status_code == 200
     assert res.json() == {"status": "ok"}
     assert fake_orchestrator.calls == [{"engine_rpm": 1}]
-
-
-# ── 4. require_admin ─────────────────────────────────────────────────────────
-# No admin-only routes exist in the backend yet, so the dependency is tested
-# on a throwaway app that shares the same database.
-
-@pytest.fixture
-def admin_client():
-    probe = FastAPI()
-
-    @probe.get("/admin-probe")
-    def admin_probe(user: User = Depends(require_admin)):
-        return {"email": user.email}
-
-    return TestClient(probe, raise_server_exceptions=False)
-
-
-def test_require_admin_rejects_missing_token(admin_client):
-    assert admin_client.get("/admin-probe").status_code == 401
-
-
-def test_require_admin_rejects_regular_user(client, admin_client):
-    regular = signup(client, "regular@example.com")
-
-    res = admin_client.get("/admin-probe", headers=regular)
-
-    assert res.status_code == 403
-    assert res.json() == {"detail": "Admin access required"}
-
-
-def test_require_admin_allows_admin(client, admin_client):
-    headers = signup(client, "boss@example.com")
-    with SessionLocal() as db:
-        db.query(User).filter(User.email == "boss@example.com").update({"role": "admin"})
-        db.commit()
-
-    res = admin_client.get("/admin-probe", headers=headers)
-
-    assert res.status_code == 200
-    assert res.json() == {"email": "boss@example.com"}

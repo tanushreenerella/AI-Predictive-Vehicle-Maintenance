@@ -8,6 +8,8 @@ from pathlib import Path
 _DB_PATH = Path(tempfile.mkdtemp(prefix="proactiveai-tests-")) / "test.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_DB_PATH.as_posix()}"
 os.environ["JWT_SECRET_KEY"] = "test-only-jwt-secret-not-for-production"
+# Set (to empty) so the real key in .env is never loaded: tests must not call Groq.
+os.environ["GROQ_API_KEY"] = ""
 
 import pytest
 from fastapi.testclient import TestClient

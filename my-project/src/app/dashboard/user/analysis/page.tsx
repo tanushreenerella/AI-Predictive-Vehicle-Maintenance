@@ -23,12 +23,12 @@ type ShapFeature = {
 };
 
 const fields: { key: keyof SensorData; label: string; placeholder: string }[] = [
-  { key: "engine_rpm",        label: "Engine RPM",              placeholder: "e.g. 3000" },
-  { key: "lub_oil_pressure",  label: "Lub Oil Pressure (bar)",  placeholder: "e.g. 2.0" },
-  { key: "fuel_pressure",     label: "Fuel Pressure (bar)",     placeholder: "e.g. 2.5" },
-  { key: "coolant_pressure",  label: "Coolant Pressure (bar)",  placeholder: "e.g. 1.2" },
-  { key: "lub_oil_temp",      label: "Lub Oil Temp (°C)",       placeholder: "e.g. 90" },
-  { key: "coolant_temp",      label: "Coolant Temp (°C)",       placeholder: "e.g. 85" },
+  { key: "engine_rpm",        label: "Engine RPM",              placeholder: "e.g. 746 (77–2239)" },
+  { key: "lub_oil_pressure",  label: "Lub Oil Pressure (bar)",  placeholder: "e.g. 3.16 (0.004–7.26)" },
+  { key: "fuel_pressure",     label: "Fuel Pressure (bar)",     placeholder: "e.g. 6.2 (0.004–21.13)" },
+  { key: "coolant_pressure",  label: "Coolant Pressure (bar)",  placeholder: "e.g. 2.17 (0.003–7.47)" },
+  { key: "lub_oil_temp",      label: "Lub Oil Temp (°C)",       placeholder: "e.g. 76.8 (71.4–89.5)" },
+  { key: "coolant_temp",      label: "Coolant Temp (°C)",       placeholder: "e.g. 78.4 (61.7–118.3)" },
 ];
 
 export default function PredictiveAnalysisPage() {

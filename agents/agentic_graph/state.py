@@ -9,7 +9,7 @@ class MLResult(TypedDict, total=False):
     pipeline (agents/failure_prediction/predict.py), normalized for
     LangGraph state. See build_ml_result() below — that function is the
     ONLY place a predict_failure() response gets translated into this
-    shape, so every caller (sensor_node, the /predict route) produces an
+    shape, so every caller (the /predict routes) produces an
     identical structure.
     """
     failure_probability: Optional[float]
@@ -42,8 +42,8 @@ class VehicleAgentState(TypedDict):
 def build_ml_result(raw: Dict[str, Any]) -> MLResult:
     """Normalize predict_failure()'s raw (camelCase) output into the
     snake_case MLResult shape LangGraph state stores. This is the single
-    source of truth for that translation — sensor_node and the /predict
-    route both call this, so they can never report ml_result differently.
+    source of truth for that translation — /predict and /predict_flex
+    both call this, so they can never report ml_result differently.
 
     Nothing here invents a value: every field is read straight from the
     real model/SHAP output, or from predict_failure()'s own honest error

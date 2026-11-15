@@ -103,7 +103,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-2 text-sm text-gray-400">
             <span className="text-gray-600">/</span>
             <span className="text-gray-300 font-medium capitalize">
-              {user?.role === 'admin' ? 'Admin' : 'Dashboard'}
+              Dashboard
             </span>
           </div>
           <div className="flex items-center gap-3">

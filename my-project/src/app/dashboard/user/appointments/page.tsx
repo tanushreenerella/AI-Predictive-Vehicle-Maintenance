@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { apiErrorMessage } from '@/lib/apiError';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import { Calendar, Clock, AlertTriangle, Lightbulb, FileText } from 'lucide-react';
 
@@ -124,12 +125,17 @@ const [newTime, setNewTime] = useState('');
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                  <input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                  <input type="time" value={newTime} min="09:00" max="17:00" step={3600} onChange={e => setNewTime(e.target.value)} className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                 </div>
                 <div className="flex gap-2 justify-end">
                   <button
                     onClick={async () => {
-                      await fetchWithAuth(`${API_BASE}/schedule/${appt.id}`, { method: 'PATCH', body: JSON.stringify({ appointment_date: newDate, appointment_time: newTime }) });
+                      const res = await fetchWithAuth(`${API_BASE}/schedule/${appt.id}`, { method: 'PATCH', body: JSON.stringify({ appointment_date: newDate, appointment_time: newTime }) });
+                      if (!res.ok) {
+                        // Keep the editor open and the old time shown: nothing was saved.
+                        alert(await apiErrorMessage(res, 'Could not reschedule. Please try another time.'));
+                        return;
+                      }
                       setAppointments(prev => prev.map(a => a.id === appt.id ? { ...a, appointment_date: newDate, appointment_time: newTime } : a));
                       setEditingId(null);
                     }}

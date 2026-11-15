@@ -98,34 +98,29 @@ Return ONLY valid JSON:
 
 @tool
 def find_appointment_slots(urgency: str, user_preference: str) -> Dict:
-    """Find available appointment slots based on urgency level and user time preferences."""
-    days_map = {"HIGH": 1, "MEDIUM": 4, "LOW": 10}
-    days = days_map.get(urgency.upper(), 4)
+    """Find the first free appointment slot in the urgency window (HIGH 1-2 days,
+    MEDIUM 3-7, LOW 8-14), honouring a morning/afternoon/evening preference when possible."""
+    # Imported lazily: the backend needs DATABASE_URL, and this module is also
+    # imported by code that never schedules.
+    from backend.services.availability import URGENCY_WINDOWS, free_slots_for_urgency
+    from backend.session import SessionLocal
 
-    pref = user_preference.lower()
-    if "today" in pref:
-        days = 0
-    elif "tomorrow" in pref:
-        days = 1
-    elif "next week" in pref:
-        days = 7
+    urgency = (urgency or "MEDIUM").upper()
+    if urgency not in URGENCY_WINDOWS:
+        urgency = "MEDIUM"
 
-    appt_time = "10:00"
-    if "afternoon" in pref:
-        appt_time = "14:00"
-    elif "morning" in pref:
-        appt_time = "09:00"
-    elif "evening" in pref:
-        appt_time = "17:00"
+    with SessionLocal() as db:
+        free = free_slots_for_urgency(db, urgency, user_preference or "")
 
-    slot_date = date.today() + timedelta(days=days)
-    backup_date = date.today() + timedelta(days=days + 1)
+    if not free:
+        first, last = URGENCY_WINDOWS[urgency]
+        return {"error": f"No free slots {first}-{last} days from now. Ask the user to contact the service center.",
+                "urgency": urgency}
 
+    labels = ["Primary slot", "Backup slot"]
+    suggested = [{"date": s["date"], "time": s["time"], "label": label} for s, label in zip(free, labels)]
     return {
-        "suggested_slots": [
-            {"date": slot_date.isoformat(), "time": appt_time, "label": "Primary slot"},
-            {"date": backup_date.isoformat(), "time": appt_time, "label": "Backup slot"},
-        ],
-        "selected_slot": {"date": slot_date.isoformat(), "time": appt_time},
-        "urgency": urgency.upper(),
+        "suggested_slots": suggested,
+        "selected_slot": {"date": free[0]["date"], "time": free[0]["time"]},
+        "urgency": urgency,
     }

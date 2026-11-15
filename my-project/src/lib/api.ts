@@ -27,8 +27,8 @@ api.interceptors.response.use(
 
 // Authentication API
 export const authAPI = {
-  login: (email: string, password: string, userType: string) =>
-    api.post('/auth/login', { email, password, userType }),
+  login: (email: string, password: string) =>
+    api.post('/auth/login', { email, password }),
   
   register: (userData: any) =>
     api.post('/auth/register', userData),
@@ -77,27 +77,6 @@ export const serviceAPI = {
   
   cancelService: (serviceId: string) =>
     api.delete(`/services/${serviceId}`),
-};
-
-// Admin API
-export const adminAPI = {
-  getFleetOverview: () =>
-    api.get('/admin/fleet'),
-  
-  getSystemMetrics: () =>
-    api.get('/admin/metrics'),
-  
-  getAgentStatus: () =>
-    api.get('/admin/agents'),
-  
-  getAlerts: () =>
-    api.get('/admin/alerts'),
-  
-  triggerDiagnostics: () =>
-    api.post('/admin/diagnostics'),
-  
-  getRCAInsights: () =>
-    api.get('/admin/rca'),
 };
 
 // Real-time WebSocket

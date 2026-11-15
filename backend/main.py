@@ -19,6 +19,7 @@ from backend.routes.agent_chat import router as agent_chat_router
 from backend.routes.predict import router as predict_router
 from backend.routes.analyze_route import router as analyze_router
 from backend.routes.reports import router as reports_router
+from backend.routes.slots import router as slots_router
 Base.metadata.create_all(bind=engine)
 
 import logging
@@ -85,4 +86,5 @@ app.include_router(agent_chat_router)
 app.include_router(predict_router)
 app.include_router(analyze_router)
 app.include_router(reports_router)
+app.include_router(slots_router)
 
